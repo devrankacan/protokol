@@ -4,11 +4,11 @@ import re
 from pathlib import Path
 
 import fitz  # PyMuPDF
-import anthropic
+from google import genai
+from google.genai import types
 
-MODEL = "claude-opus-4-7"
+MODEL = "gemini-2.5-pro"
 
-# JSON keys stay the same regardless of language; only the VALUES change.
 SYSTEM_PROMPT_TEMPLATE = """You are an expert clinical research evaluation assistant working for Genexa CRO. Below is the full text of a clinical trial protocol.
 
 PROTOCOL TEXT:
@@ -20,7 +20,7 @@ Your task: Evaluate patient data against the inclusion/exclusion criteria, bioma
 
 OUTPUT LANGUAGE: {language_instruction}
 
-Respond ONLY with the following JSON structure — no additional text:
+Respond ONLY with the following JSON structure — no additional text, no markdown code blocks:
 
 {{
   "hasta_id": "patient identifier",
@@ -146,14 +146,14 @@ USER_MESSAGE = {
 HASTA VERİLERİ:
 {patient_text}
 
-Tüm kriterleri tek tek incele, eksik bilgileri "BİLİNMİYOR" olarak işaretle, biyomarker değerlerini protokol eşikleriyle karşılaştır ve kapsamlı bir değerlendirme yap.""",
+Tüm kriterleri tek tek incele, eksik bilgileri "BİLİNMİYOR" olarak işaretle, biyomarker değerlerini protokol eşikleriyle karşılaştır ve kapsamlı bir değerlendirme yap. Sadece JSON döndür, başka hiçbir metin ekleme.""",
 
     "en": """Evaluate the patient data below against the protocol and produce a report in the specified JSON format, with all text in English:
 
 PATIENT DATA:
 {patient_text}
 
-Examine every criterion individually, mark missing information as "UNKNOWN", compare biomarker values against protocol thresholds, and provide a comprehensive assessment.""",
+Examine every criterion individually, mark missing information as "UNKNOWN", compare biomarker values against protocol thresholds, and provide a comprehensive assessment. Return only JSON, no additional text.""",
 }
 
 
@@ -162,13 +162,13 @@ class ProtocolAnalyzer:
         self._client = None
 
     @property
-    def client(self) -> anthropic.Anthropic:
+    def client(self) -> genai.Client:
         if self._client is None:
-            self._client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+            self._client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
         return self._client
 
     def reset_protocol(self):
-        pass  # Prompt cache is request-level; nothing to reset
+        pass
 
     def extract_pdf_text(self, pdf_path: Path) -> str:
         doc = fitz.open(str(pdf_path))
@@ -180,48 +180,38 @@ class ProtocolAnalyzer:
         lang = language if language in LANGUAGE_CONFIGS else "tr"
         cfg = LANGUAGE_CONFIGS[lang]
 
-        system_content = SYSTEM_PROMPT_TEMPLATE.format(
+        system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
             protocol_text=protocol_text,
             **cfg,
         )
         user_message = USER_MESSAGE[lang].format(patient_text=patient_text)
 
-        response = self.client.messages.create(
+        response = self.client.models.generate_content(
             model=MODEL,
-            max_tokens=8000,
-            thinking={"type": "adaptive"},
-            system=[
-                {
-                    "type": "text",
-                    "text": system_content,
-                    "cache_control": {"type": "ephemeral"},
-                }
-            ],
-            messages=[{"role": "user", "content": user_message}],
+            contents=user_message,
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                thinking_config=types.ThinkingConfig(thinking_budget=-1),
+                temperature=1,
+            ),
         )
 
-        raw_text = ""
-        for block in response.content:
-            if block.type == "text":
-                raw_text = block.text
-                break
-
-        return self._parse_json_response(raw_text, lang)
+        return self._parse_json_response(response.text, lang)
 
     def _parse_json_response(self, text: str, lang: str = "tr") -> dict:
         text = text.strip()
+
+        # Strip markdown code block if present
+        text = re.sub(r"^```(?:json)?\s*", "", text)
+        text = re.sub(r"\s*```$", "", text)
+        text = text.strip()
+
         try:
             return json.loads(text)
         except json.JSONDecodeError:
             pass
 
-        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-        if match:
-            try:
-                return json.loads(match.group(1))
-            except json.JSONDecodeError:
-                pass
-
+        # Find first { ... } block
         start = text.find("{")
         end = text.rfind("}")
         if start != -1 and end != -1:
