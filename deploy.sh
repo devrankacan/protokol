@@ -30,22 +30,15 @@ apt-get install -y -qq \
 
 echo "   ✓ Sistem paketleri hazır"
 
-# ── 2. Uygulama dizini ─────────────────────────────────────────────────────────
+# ── 2. Repo klonla veya güncelle ───────────────────────────────────────────────
 echo ""
-echo ">> Uygulama dizini: $APP_DIR"
-mkdir -p "$APP_DIR/uploads"
-mkdir -p "$APP_DIR/reports"
-
-# ── 3. Repo klonla veya güncelle ───────────────────────────────────────────────
-echo ""
+echo ">> Kod hazırlanıyor: $APP_DIR"
 if [ -d "$APP_DIR/.git" ]; then
   echo ">> Mevcut repo güncelleniyor..."
   git -C "$APP_DIR" pull origin claude/discuss-website-project-MwN4j
 else
-  # Dizin var ama git repo değil — temizle ve klonla
+  # Dizin varsa (mkdir veya başka bir şey yarattıysa) temizle
   if [ -d "$APP_DIR" ]; then
-    echo ">> Dizin mevcut ama git repo değil, temizleniyor..."
-    # uploads ve reports klasörlerini koru
     cp -r "$APP_DIR/uploads" /tmp/genexa-uploads-backup 2>/dev/null || true
     cp -r "$APP_DIR/reports" /tmp/genexa-reports-backup 2>/dev/null || true
     rm -rf "$APP_DIR"
@@ -59,6 +52,9 @@ else
   cp -r /tmp/genexa-uploads-backup/. "$APP_DIR/uploads/" 2>/dev/null || true
   cp -r /tmp/genexa-reports-backup/. "$APP_DIR/reports/" 2>/dev/null || true
 fi
+
+# uploads ve reports dizinleri yoksa oluştur
+mkdir -p "$APP_DIR/uploads" "$APP_DIR/reports"
 echo "   ✓ Kod hazır"
 
 # ── 4. Python sanal ortamı ─────────────────────────────────────────────────────
