@@ -7,7 +7,7 @@ set -e
 
 APP_DIR="/opt/genexa-cro"
 SERVICE_NAME="genexa-cro"
-PORT=8000
+PORT=3055
 
 echo "======================================================"
 echo "  Genexa CRO — VPS Kurulum Scripti"
