@@ -4,10 +4,9 @@ import re
 from pathlib import Path
 
 import fitz  # PyMuPDF
-from google import genai
-from google.genai import types
+from groq import Groq
 
-MODEL = "gemini-2.0-flash"
+MODEL = "llama-3.3-70b-versatile"
 
 SYSTEM_PROMPT_TEMPLATE = """You are an expert clinical research evaluation assistant working for Genexa CRO. Below is the full text of a clinical trial protocol.
 
@@ -20,7 +19,7 @@ Your task: Evaluate patient data against the inclusion/exclusion criteria, bioma
 
 OUTPUT LANGUAGE: {language_instruction}
 
-Respond ONLY with the following JSON structure — no additional text, no markdown code blocks:
+Respond ONLY with the following JSON structure — no additional text, no markdown code blocks, no explanation:
 
 {{
   "hasta_id": "patient identifier",
@@ -141,19 +140,15 @@ LANGUAGE_CONFIGS = {
 }
 
 USER_MESSAGE = {
-    "tr": """Aşağıdaki hasta verilerini protokole göre değerlendir ve belirtilen JSON formatında Türkçe rapor üret:
+    "tr": """Aşağıdaki hasta verilerini protokole göre değerlendir ve belirtilen JSON formatında Türkçe rapor üret. Sadece JSON döndür:
 
 HASTA VERİLERİ:
-{patient_text}
+{patient_text}""",
 
-Tüm kriterleri tek tek incele, eksik bilgileri "BİLİNMİYOR" olarak işaretle, biyomarker değerlerini protokol eşikleriyle karşılaştır ve kapsamlı bir değerlendirme yap. Sadece JSON döndür, başka hiçbir metin ekleme.""",
-
-    "en": """Evaluate the patient data below against the protocol and produce a report in the specified JSON format, with all text in English:
+    "en": """Evaluate the patient data below against the protocol and return ONLY the JSON report in English:
 
 PATIENT DATA:
-{patient_text}
-
-Examine every criterion individually, mark missing information as "UNKNOWN", compare biomarker values against protocol thresholds, and provide a comprehensive assessment. Return only JSON, no additional text.""",
+{patient_text}""",
 }
 
 
@@ -162,9 +157,9 @@ class ProtocolAnalyzer:
         self._client = None
 
     @property
-    def client(self) -> genai.Client:
+    def client(self) -> Groq:
         if self._client is None:
-            self._client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+            self._client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         return self._client
 
     def reset_protocol(self):
@@ -186,17 +181,18 @@ class ProtocolAnalyzer:
         )
         user_message = USER_MESSAGE[lang].format(patient_text=patient_text)
 
-        response = self.client.models.generate_content(
+        response = self.client.chat.completions.create(
             model=MODEL,
-            contents=user_message,
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                thinking_config=types.ThinkingConfig(thinking_budget=-1),
-                temperature=1,
-            ),
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ],
+            temperature=0.1,
+            max_tokens=8000,
         )
 
-        return self._parse_json_response(response.text, lang)
+        raw_text = response.choices[0].message.content or ""
+        return self._parse_json_response(raw_text, lang)
 
     def _parse_json_response(self, text: str, lang: str = "tr") -> dict:
         text = text.strip()
@@ -211,7 +207,6 @@ class ProtocolAnalyzer:
         except json.JSONDecodeError:
             pass
 
-        # Find first { ... } block
         start = text.find("{")
         end = text.rfind("}")
         if start != -1 and end != -1:
