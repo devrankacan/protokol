@@ -7,7 +7,7 @@ import fitz  # PyMuPDF
 from google import genai
 from google.genai import types
 
-MODEL = "gemini-2.5-pro"
+MODEL = "gemini-2.0-flash"
 
 SYSTEM_PROMPT_TEMPLATE = """You are an expert clinical research evaluation assistant working for Genexa CRO. Below is the full text of a clinical trial protocol.
 
