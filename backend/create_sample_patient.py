@@ -1,126 +1,191 @@
 """
-Örnek hasta PDF dosyası oluşturucu.
-Çalıştır: python3 create_sample_patient.py
+Örnek hasta PDF dosyası oluşturucu (fpdf2 kullanır — sistem bağımlılığı yok).
+Çalıştır: /opt/genexa-protokol/.venv/bin/python3 create_sample_patient.py
 Çıktı: /tmp/ornek_hasta_104.pdf
 """
-from weasyprint import HTML, CSS
+from fpdf import FPDF
 
-HTML_CONTENT = """
-<!DOCTYPE html>
-<html lang="tr">
-<head><meta charset="UTF-8"><title>Hasta Veri Formu</title></head>
-<body>
+OUTPUT = "/tmp/ornek_hasta_104.pdf"
 
-<h1>HASTA DEĞERLENDİRME FORMU</h1>
-<h2>Protokol: CRN04894-13 — Atumelnant (Pediatrik KAH Faz 2/3)</h2>
-<p><strong>Merkez:</strong> Genexa CRO Araştırma Merkezi &nbsp;|&nbsp;
-   <strong>Başvuru Tarihi:</strong> 08 Mayıs 2026</p>
+NAVY  = (13, 43, 94)
+BLUE  = (21, 101, 192)
+WHITE = (255, 255, 255)
+LGRAY = (245, 247, 250)
+DGRAY = (55, 71, 79)
+GREEN = (46, 125, 50)
 
-<hr>
 
-<h3>1. KİMLİK BİLGİLERİ</h3>
-<table border="1" cellpadding="6" cellspacing="0" width="100%">
-  <tr><td width="35%"><strong>Hasta Kodu</strong></td><td>Hasta-104</td></tr>
-  <tr><td><strong>Ad Soyad</strong></td><td>A.Y. (gizlenmiş)</td></tr>
-  <tr><td><strong>Doğum Tarihi</strong></td><td>12 Mart 2012</td></tr>
-  <tr><td><strong>Yaş</strong></td><td>14 yıl 2 ay</td></tr>
-  <tr><td><strong>Cinsiyet</strong></td><td>Erkek</td></tr>
-  <tr><td><strong>Ağırlık</strong></td><td>52 kg</td></tr>
-  <tr><td><strong>Boy</strong></td><td>158 cm</td></tr>
-  <tr><td><strong>Vücut Yüzey Alanı (BSA)</strong></td><td>1.50 m²</td></tr>
-</table>
+class ReportPDF(FPDF):
+    def header(self):
+        pass
 
-<h3>2. TANI VE GENETİK BİLGİLER</h3>
-<table border="1" cellpadding="6" cellspacing="0" width="100%">
-  <tr><td width="35%"><strong>Primer Tanı</strong></td><td>Klasik Konjenital Adrenal Hiperplazi (KAH) — Tuz Kaybettiren Form</td></tr>
-  <tr><td><strong>Mutasyon</strong></td><td>CYP21A2 biallelik mutasyon — konfirme edildi</td></tr>
-  <tr><td><strong>Tanı Yaşı</strong></td><td>Yenidoğan döneminde (3. gün)</td></tr>
-  <tr><td><strong>Hastalık Süresi</strong></td><td>14 yıl</td></tr>
-</table>
+    def section_header(self, title):
+        self.set_fill_color(*NAVY)
+        self.set_text_color(*WHITE)
+        self.set_font("Helvetica", "B", 9)
+        self.cell(0, 7, title, fill=True, ln=True, border=0)
+        self.set_text_color(0, 0, 0)
 
-<h3>3. MEVCUT TEDAVİ</h3>
-<table border="1" cellpadding="6" cellspacing="0" width="100%">
-  <tr><td width="35%"><strong>İlaç</strong></td><td>Hidrokortizon (Kortef)</td></tr>
-  <tr><td><strong>Günlük Doz</strong></td><td>20 mg/gün (bölünmüş dozlar: 10mg sabah, 7mg öğle, 3mg akşam)</td></tr>
-  <tr><td><strong>BSA'ya Göre Doz</strong></td><td>13.3 mg/m²/gün</td></tr>
-  <tr><td><strong>Tedavi Süresi (stabil)</strong></td><td>Son 3 aydır değişmeden devam ediyor</td></tr>
-  <tr><td><strong>Ek İlaç</strong></td><td>Fludrokortizon 0.1 mg/gün</td></tr>
-  <tr><td><strong>NaCl Takviyesi</strong></td><td>Yok</td></tr>
-</table>
+    def two_col_row(self, label, value, fill=False):
+        self.set_font("Helvetica", "", 8.5)
+        if fill:
+            self.set_fill_color(*LGRAY)
+        self.set_font("Helvetica", "", 8)
+        self.cell(65, 6, label, border="B", fill=fill)
+        self.set_font("Helvetica", "B", 8.5)
+        self.cell(0, 6, value, border="B", fill=fill, ln=True)
 
-<h3>4. BİYOKİMYASAL / LABORATUVAR SONUÇLARI</h3>
-<p><em>Sonuçlar son 4 hafta içinde alınmıştır.</em></p>
-<table border="1" cellpadding="6" cellspacing="0" width="100%">
-  <tr bgcolor="#f0f0f0">
-    <th>Parametre</th><th>Değer</th><th>Birim</th><th>Referans Aralığı</th>
-  </tr>
-  <tr><td>Androstenedion (A4)</td><td><strong>380</strong></td><td>ng/dL</td><td>ULN: 115 ng/dL (yaşa göre)</td></tr>
-  <tr><td>17-Hidroksiprogesteron (17-OHP)</td><td><strong>2500</strong></td><td>ng/dL</td><td>Normal: &lt;100 ng/dL</td></tr>
-  <tr><td>Testosteron (Total)</td><td>420</td><td>ng/dL</td><td>Yaşa göre yüksek</td></tr>
-  <tr><td>DHEA-S</td><td>310</td><td>µg/dL</td><td>Referans üstü</td></tr>
-  <tr><td>Sabah Kortizol (08:00)</td><td>8.2</td><td>µg/dL</td><td>6–18 µg/dL</td></tr>
-  <tr><td>ACTH</td><td>185</td><td>pg/mL</td><td>Normal: &lt;46 pg/mL</td></tr>
-  <tr><td>Renin (aktif)</td><td>3.1</td><td>ng/mL/saat</td><td>Normal aralıkta</td></tr>
-  <tr><td>Sodyum (Na)</td><td>139</td><td>mEq/L</td><td>136–145 mEq/L ✓</td></tr>
-  <tr><td>Potasyum (K)</td><td>4.1</td><td>mEq/L</td><td>3.5–5.0 mEq/L ✓</td></tr>
-  <tr><td>AST</td><td>24</td><td>U/L</td><td>&lt;40 U/L ✓</td></tr>
-  <tr><td>ALT</td><td>19</td><td>U/L</td><td>&lt;40 U/L ✓</td></tr>
-  <tr><td>Kreatinin</td><td>0.72</td><td>mg/dL</td><td>Normal ✓</td></tr>
-  <tr><td>HbA1c</td><td>5.4</td><td>%</td><td>&lt;5.7% ✓</td></tr>
-  <tr><td>Açlık Glukozu</td><td>88</td><td>mg/dL</td><td>70–100 mg/dL ✓</td></tr>
-</table>
+    def table_header(self, cols):
+        self.set_fill_color(*BLUE)
+        self.set_text_color(*WHITE)
+        self.set_font("Helvetica", "B", 7.5)
+        for text, width in cols:
+            self.cell(width, 6, text, border=1, fill=True)
+        self.ln()
+        self.set_text_color(0, 0, 0)
 
-<h3>5. KLİNİK BULGULAR</h3>
-<table border="1" cellpadding="6" cellspacing="0" width="100%">
-  <tr><td width="35%"><strong>Tanner Evresi</strong></td><td>Evre 4 (pubik kıllanma G4, testis hacmi 12 mL bilateral)</td></tr>
-  <tr><td><strong>Kemik Yaşı</strong></td><td>15 yıl 6 ay (kronolojik yaşa göre ileri)</td></tr>
-  <tr><td><strong>Boy SDS</strong></td><td>-0.8 (yaşa uygun normal alt sınırda)</td></tr>
-  <tr><td><strong>Testis Adrenal Rest Tümörü (TART)</strong></td><td>Yok — skrotal ultrason normal (son 1 ay)</td></tr>
-  <tr><td><strong>EKG — QTcF</strong></td><td>410 ms (normal &lt;450 ms) ✓</td></tr>
-  <tr><td><strong>Tansiyon</strong></td><td>118/72 mmHg (normal)</td></tr>
-  <tr><td><strong>Cushing Bulguları</strong></td><td>Yok</td></tr>
-  <tr><td><strong>Akne</strong></td><td>Hafif (grade 1)</td></tr>
-  <tr><td><strong>Genel Durum</strong></td><td>İyi, aktif sporcu (futbol)</td></tr>
-</table>
+    def table_row(self, cells, fill=False):
+        if fill:
+            self.set_fill_color(*LGRAY)
+        self.set_font("Helvetica", "", 8)
+        for text, width in cells:
+            self.multi_cell(width, 5.5, text, border="B", fill=fill, ln=3)
+        self.ln()
 
-<h3>6. ARAŞTIRMA İÇİN ONAY</h3>
-<table border="1" cellpadding="6" cellspacing="0" width="100%">
-  <tr><td width="35%"><strong>Aydınlatılmış Onam</strong></td><td>Ebeveyn ve çocuk onayı alındı — 05 Mayıs 2026</td></tr>
-  <tr><td><strong>Ebeveyn/Vasi</strong></td><td>Anne — imzalı form mevcut</td></tr>
-  <tr><td><strong>Çocuk Onayı (Assent)</strong></td><td>Alındı (14 yaş üzeri)</td></tr>
-  <tr><td><strong>Daha Önce Araştırma Katılımı</strong></td><td>Hayır</td></tr>
-  <tr><td><strong>Gebelik (uygulanamaz)</strong></td><td>Erkek hasta</td></tr>
-</table>
 
-<h3>7. EK BİLGİLER</h3>
-<p>Hasta ve ailesi protokol hakkında bilgilendirilmiştir. Düzenli takip randevularına uyum iyi.
-Başka kronik hastalık bulunmamaktadır. Sigara/alkol kullanımı yok.
-Son 4 hafta içinde başka ilaç kullanımı bulunmamaktadır (NSAİİ dahil).</p>
+pdf = ReportPDF(orientation="P", unit="mm", format="A4")
+pdf.set_auto_page_break(auto=True, margin=15)
+pdf.add_page()
+pdf.set_margins(15, 15, 15)
 
-<p>Son adrenal kriz: 3 yıl önce (ateşli hastalık sırasında, hastaneye yatış gerektirdi).</p>
+# ── Başlık ─────────────────────────────────────────────────────────────────────
+pdf.set_fill_color(*NAVY)
+pdf.set_text_color(*WHITE)
+pdf.set_font("Helvetica", "B", 14)
+pdf.cell(0, 9, "HASTA DEGERLENDIRME FORMU", fill=True, ln=True, align="C")
+pdf.set_font("Helvetica", "", 9)
+pdf.cell(0, 6, "Protokol: CRN04894-13 - Atumelnant (Pediatrik KAH Faz 2/3)", fill=True, ln=True, align="C")
+pdf.set_font("Helvetica", "", 8)
+pdf.cell(0, 5, "Merkez: Genexa CRO Arastirma Merkezi  |  Basvuru: 08 Mayis 2026", fill=True, ln=True, align="C")
+pdf.set_text_color(0, 0, 0)
+pdf.ln(4)
 
-<hr>
-<p><em>Bu form araştırma merkezi tarafından hazırlanmıştır. Genexa CRO — Mayıs 2026</em></p>
+# ── 1. Kimlik ──────────────────────────────────────────────────────────────────
+pdf.section_header("1. KIMLIK BILGILERI")
+pdf.set_font("Helvetica", "", 8.5)
+rows = [
+    ("Hasta Kodu", "Hasta-104"),
+    ("Ad Soyad", "A.Y. (gizlenmis)"),
+    ("Dogum Tarihi", "12 Mart 2012"),
+    ("Yas", "14 yil 2 ay"),
+    ("Cinsiyet", "Erkek"),
+    ("Agirlik", "52 kg"),
+    ("Boy", "158 cm"),
+    ("Vucut Yuzey Alani (BSA)", "1.50 m2"),
+]
+for i, (k, v) in enumerate(rows):
+    pdf.two_col_row(k, v, fill=(i % 2 == 0))
+pdf.ln(3)
 
-</body>
-</html>
-"""
+# ── 2. Tanı ────────────────────────────────────────────────────────────────────
+pdf.section_header("2. TANI VE GENETIK BILGILER")
+rows = [
+    ("Primer Tani", "Klasik Konjenital Adrenal Hiperplazi (KAH) - Tuz Kaybettiren Form"),
+    ("Mutasyon", "CYP21A2 biallelik mutasyon - konfirme edildi"),
+    ("Tani Yasi", "Yenidogan doneminde (3. gun)"),
+    ("Hastalik Suresi", "14 yil"),
+]
+for i, (k, v) in enumerate(rows):
+    pdf.two_col_row(k, v, fill=(i % 2 == 0))
+pdf.ln(3)
 
-CSS_CONTENT = """
-@page { size: A4; margin: 20mm 18mm; }
-body { font-family: Arial, sans-serif; font-size: 10pt; color: #1a1a1a; line-height: 1.5; }
-h1 { font-size: 14pt; color: #0D2B5E; border-bottom: 2px solid #0D2B5E; padding-bottom: 6px; }
-h2 { font-size: 11pt; color: #1565C0; margin-bottom: 4px; }
-h3 { font-size: 10.5pt; color: #0D2B5E; margin-top: 16px; margin-bottom: 4px; }
-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9.5pt; }
-th { background: #0D2B5E; color: white; padding: 6px 8px; text-align: left; }
-td { padding: 5px 8px; border: 1px solid #ccc; }
-tr:nth-child(even) td { background: #f9f9f9; }
-hr { border: none; border-top: 1px solid #ccc; margin: 12px 0; }
-p { margin: 4px 0 8px; }
-"""
+# ── 3. Tedavi ──────────────────────────────────────────────────────────────────
+pdf.section_header("3. MEVCUT TEDAVI")
+rows = [
+    ("Ilac", "Hidrokortizon (Kortef)"),
+    ("Gunluk Doz", "20 mg/gun (10mg sabah, 7mg ogle, 3mg aksam)"),
+    ("BSA'ya Gore Doz", "13.3 mg/m2/gun"),
+    ("Tedavi Suresi (stabil)", "Son 3 aydir degismeden devam ediyor"),
+    ("Ek Ilac", "Fludrokortizon 0.1 mg/gun"),
+    ("NaCl Takviyesi", "Yok"),
+]
+for i, (k, v) in enumerate(rows):
+    pdf.two_col_row(k, v, fill=(i % 2 == 0))
+pdf.ln(3)
 
-if __name__ == "__main__":
-    output = "/tmp/ornek_hasta_104.pdf"
-    HTML(string=HTML_CONTENT).write_pdf(output, stylesheets=[CSS(string=CSS_CONTENT)])
-    print(f"✓ Örnek hasta PDF oluşturuldu: {output}")
+# ── 4. Lab ─────────────────────────────────────────────────────────────────────
+pdf.section_header("4. BIYOKIMYASAL / LABORATUVAR SONUCLARI")
+pdf.set_font("Helvetica", "I", 7.5)
+pdf.cell(0, 5, "Sonuclar son 4 hafta icinde alinmistir.", ln=True)
+pdf.ln(1)
+
+cols = [("Parametre", 60), ("Deger", 25), ("Birim", 25), ("Referans", 70)]
+pdf.table_header(cols)
+lab = [
+    ("Androstenedion (A4)", "380", "ng/dL", "ULN: 115 ng/dL"),
+    ("17-Hidroksiprog. (17-OHP)", "2500", "ng/dL", "Normal: <100 ng/dL"),
+    ("Testosteron (Total)", "420", "ng/dL", "Yasa gore yuksek"),
+    ("DHEA-S", "310", "ug/dL", "Referans ustu"),
+    ("Sabah Kortizol (08:00)", "8.2", "ug/dL", "6-18 ug/dL"),
+    ("ACTH", "185", "pg/mL", "Normal: <46 pg/mL"),
+    ("Renin (aktif)", "3.1", "ng/mL/saat", "Normal aralikta"),
+    ("Sodyum (Na)", "139", "mEq/L", "136-145 mEq/L [NORMAL]"),
+    ("Potasyum (K)", "4.1", "mEq/L", "3.5-5.0 mEq/L [NORMAL]"),
+    ("AST", "24", "U/L", "<40 U/L [NORMAL]"),
+    ("ALT", "19", "U/L", "<40 U/L [NORMAL]"),
+    ("Kreatinin", "0.72", "mg/dL", "Normal"),
+    ("HbA1c", "5.4", "%", "<5.7% [NORMAL]"),
+    ("Aclik Glukozu", "88", "mg/dL", "70-100 mg/dL [NORMAL]"),
+]
+for i, row in enumerate(lab):
+    pdf.table_row([(v, w) for v, (_, w) in zip(row, cols)], fill=(i % 2 == 0))
+pdf.ln(3)
+
+# ── 5. Klinik ──────────────────────────────────────────────────────────────────
+pdf.section_header("5. KLINIK BULGULAR")
+rows = [
+    ("Tanner Evresi", "Evre 4 (G4, testis hacmi 12 mL bilateral)"),
+    ("Kemik Yasi", "15 yil 6 ay (kronolojik yasa gore ileri)"),
+    ("Boy SDS", "-0.8 (normal alt sinirda)"),
+    ("TART (Testis Adrenal Rest)", "Yok - skrotal ultrason normal (son 1 ay)"),
+    ("EKG - QTcF", "410 ms (normal <450 ms) [NORMAL]"),
+    ("Tansiyon", "118/72 mmHg (normal)"),
+    ("Cushing Bulgulari", "Yok"),
+    ("Akne", "Hafif (grade 1)"),
+    ("Genel Durum", "Iyi, aktif sporcu (futbol)"),
+]
+for i, (k, v) in enumerate(rows):
+    pdf.two_col_row(k, v, fill=(i % 2 == 0))
+pdf.ln(3)
+
+# ── 6. Onay ───────────────────────────────────────────────────────────────────
+pdf.section_header("6. ARASTIRMA ICIN ONAY")
+rows = [
+    ("Aydinlatilmis Onam", "Ebeveyn ve cocuk onavi alindi - 05 Mayis 2026"),
+    ("Ebeveyn/Vasi", "Anne - imzali form mevcut"),
+    ("Cocuk Onavi (Assent)", "Alindi (14 yas uzeri)"),
+    ("Daha Once Katilim", "Hayir"),
+    ("Gebelik", "Erkek hasta - gecerli degil"),
+]
+for i, (k, v) in enumerate(rows):
+    pdf.two_col_row(k, v, fill=(i % 2 == 0))
+pdf.ln(3)
+
+# ── 7. Ek ─────────────────────────────────────────────────────────────────────
+pdf.section_header("7. EK BILGILER")
+pdf.set_font("Helvetica", "", 8.5)
+pdf.multi_cell(0, 5.5,
+    "Hasta ve ailesi protokol hakkinda bilgilendirilmistir. Duzenli takip randevularina uyum iyi. "
+    "Baska kronik hastalik bulunmamaktadir. Sigara/alkol kullanimi yok. "
+    "Son 4 hafta icinde baska ilac kullanimi bulunmamaktadir (NSAII dahil). "
+    "Son adrenal kriz: 3 yil once (atesleli hastalik sirasinda, hastaneye yatis gerektirdi)."
+)
+pdf.ln(4)
+
+# ── Footer ─────────────────────────────────────────────────────────────────────
+pdf.set_font("Helvetica", "I", 7.5)
+pdf.set_text_color(*DGRAY)
+pdf.cell(0, 5, "Bu form arastirma merkezi tarafindan hazirlanmistir. Genexa CRO - Mayis 2026", align="C", ln=True)
+
+pdf.output(OUTPUT)
+print(f"Ornek hasta PDF olusturuldu: {OUTPUT}")

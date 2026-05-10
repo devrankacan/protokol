@@ -4,7 +4,8 @@ python-multipart==0.0.12
 jinja2==3.1.4
 google-genai==1.16.0
 pymupdf==1.25.1
-weasyprint==61.2
+xhtml2pdf==0.2.16
+fpdf2==2.8.1
 python-dotenv==1.0.1
 itsdangerous==2.2.0
 aiofiles==24.1.0
