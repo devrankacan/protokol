@@ -22,9 +22,11 @@ UPLOADS_DIR = BASE_DIR / "uploads"
 REPORTS_DIR = BASE_DIR / "reports"
 PROTOCOL_PATH = BASE_DIR / "uploads" / "protocol.pdf"
 PROTOCOL_TEXT_PATH = BASE_DIR / "uploads" / "protocol_text.txt"
+LOGO_PATH = BASE_DIR / "static" / "images" / "logo.png"
 
 UPLOADS_DIR.mkdir(exist_ok=True)
 REPORTS_DIR.mkdir(exist_ok=True)
+(BASE_DIR / "static" / "images").mkdir(exist_ok=True)
 
 app = FastAPI(title="Genexa CRO Protocol Analyzer")
 
@@ -119,6 +121,27 @@ async def dashboard(request: Request):
         "protocol_name": protocol_name,
         "reports": reports,
     })
+
+
+# ── Logo upload ────────────────────────────────────────────────────────────────
+
+@app.post("/api/upload-logo")
+async def upload_logo(
+    request: Request,
+    file: UploadFile = File(...),
+):
+    if not get_current_user(request):
+        raise HTTPException(status_code=401)
+
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Sadece resim dosyaları kabul edilir.")
+
+    content = await file.read()
+    if len(content) > 2 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Dosya boyutu 2MB'ı aşamaz.")
+
+    LOGO_PATH.write_bytes(content)
+    return JSONResponse({"success": True, "message": "Logo güncellendi."})
 
 
 # ── Protocol upload ────────────────────────────────────────────────────────────

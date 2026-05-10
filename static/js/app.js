@@ -169,6 +169,45 @@ async function analyzePatient(input) {
 }
 
 
+// ── Logo Upload ───────────────────────────────────────────────────────────────
+
+async function uploadLogo(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const msg = document.getElementById('logo-upload-msg');
+  msg.textContent = 'Yükleniyor...';
+  msg.style.color = 'var(--text-light)';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await fetch('/api/upload-logo', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      msg.textContent = '✅ Logo güncellendi';
+      msg.style.color = 'var(--success)';
+      const preview = document.getElementById('logo-preview-img');
+      const placeholder = document.getElementById('logo-placeholder');
+      preview.src = '/static/images/logo.png?t=' + Date.now();
+      preview.style.display = 'block';
+      if (placeholder) placeholder.style.display = 'none';
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      msg.textContent = '❌ ' + (data.detail || 'Hata');
+      msg.style.color = 'var(--danger)';
+    }
+  } catch (err) {
+    msg.textContent = '❌ Bağlantı hatası';
+    msg.style.color = 'var(--danger)';
+  } finally {
+    input.value = '';
+  }
+}
+
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function showProgress(container, fill, text, message, animated) {
