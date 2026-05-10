@@ -20,9 +20,9 @@ def _font_face_css() -> str:
     return css
 
 PDF_CSS_BASE = """
-@page {{ size: A4; margin: 15mm 12mm; }}
-{font_face}
-body {{ font-family: {font_family}; font-size: 9pt; color: #1a1a2e; line-height: 1.4; }}
+@page { size: A4; margin: 15mm 12mm; }
+%%FONT_FACE%%
+body { font-family: %%FONT_FAMILY%%; font-size: 9pt; color: #1a1a2e; line-height: 1.4; }
 
 .report-header { background-color: #6B0F1A; color: white; padding: 14px 18px; margin-bottom: 14px; }
 .report-header-inner { display: flex; align-items: center; }
@@ -84,7 +84,7 @@ def _render_pdf(report_data: dict, patient_id: str, output_path: Path, language:
     # Build CSS with font support
     font_face = _font_face_css()
     font_family = "DejaVu, Helvetica, Arial, sans-serif" if font_face else "Helvetica, Arial, sans-serif"
-    pdf_css = PDF_CSS_BASE.format(font_face=font_face, font_family=font_family)
+    pdf_css = PDF_CSS_BASE.replace("%%FONT_FACE%%", font_face).replace("%%FONT_FAMILY%%", font_family)
 
     # Logo as base64 data URL for reliable embedding
     logo_src = ""
