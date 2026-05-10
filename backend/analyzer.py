@@ -152,6 +152,70 @@ PATIENT DATA:
 }
 
 
+CRITERIA_KEYWORDS = [
+    # English
+    "inclusion criteria", "exclusion criteria", "eligibility criteria",
+    "inclusion/exclusion", "key eligibility", "study population",
+    "dose", "dosing", "cohort", "biomarker", "endpoint", "pharmacokinetic",
+    "safety", "stopping rules", "treatment arm", "randomization",
+    # Turkish
+    "dahil etme", "dışlama", "uygunluk", "doz", "kohort", "biyomarker",
+]
+
+MAX_PROTOCOL_CHARS = 24000  # ~6K tokens, leaves room for patient + system prompt
+
+
+def extract_protocol_criteria(protocol_text: str) -> str:
+    """Extract the most relevant sections from a protocol to fit within token limits."""
+    if len(protocol_text) <= MAX_PROTOCOL_CHARS:
+        return protocol_text
+
+    text_lower = protocol_text.lower()
+    sections = []
+    collected_chars = 0
+
+    # Find positions of key sections
+    positions = []
+    for kw in CRITERIA_KEYWORDS:
+        idx = text_lower.find(kw)
+        while idx != -1 and idx not in positions:
+            positions.append(idx)
+            idx = text_lower.find(kw, idx + len(kw))
+
+    if not positions:
+        # No keywords found — return first chunk
+        return protocol_text[:MAX_PROTOCOL_CHARS]
+
+    # Sort and deduplicate, then extract windows around each hit
+    positions = sorted(set(positions))
+    used_ranges = []
+
+    for pos in positions:
+        if collected_chars >= MAX_PROTOCOL_CHARS:
+            break
+        # Extract a window of 2000 chars around the keyword
+        start = max(0, pos - 200)
+        end = min(len(protocol_text), pos + 1800)
+
+        # Skip if overlapping with already collected range
+        overlap = any(s <= start <= e or s <= end <= e for s, e in used_ranges)
+        if overlap:
+            continue
+
+        chunk = protocol_text[start:end].strip()
+        sections.append(chunk)
+        used_ranges.append((start, end))
+        collected_chars += len(chunk)
+
+    result = "\n\n---\n\n".join(sections)
+
+    # If still too large, truncate
+    if len(result) > MAX_PROTOCOL_CHARS:
+        result = result[:MAX_PROTOCOL_CHARS]
+
+    return result
+
+
 class ProtocolAnalyzer:
     def __init__(self):
         self._client = None
@@ -172,6 +236,8 @@ class ProtocolAnalyzer:
         return "\n".join(pages)
 
     async def analyze(self, protocol_text: str, patient_text: str, language: str = "tr") -> dict:
+        # Trim protocol to relevant sections only
+        protocol_text = extract_protocol_criteria(protocol_text)
         lang = language if language in LANGUAGE_CONFIGS else "tr"
         cfg = LANGUAGE_CONFIGS[lang]
 
