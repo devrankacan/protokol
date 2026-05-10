@@ -42,11 +42,22 @@ if [ -d "$APP_DIR/.git" ]; then
   echo ">> Mevcut repo güncelleniyor..."
   git -C "$APP_DIR" pull origin claude/discuss-website-project-MwN4j
 else
+  # Dizin var ama git repo değil — temizle ve klonla
+  if [ -d "$APP_DIR" ]; then
+    echo ">> Dizin mevcut ama git repo değil, temizleniyor..."
+    # uploads ve reports klasörlerini koru
+    cp -r "$APP_DIR/uploads" /tmp/genexa-uploads-backup 2>/dev/null || true
+    cp -r "$APP_DIR/reports" /tmp/genexa-reports-backup 2>/dev/null || true
+    rm -rf "$APP_DIR"
+  fi
   echo ">> Repo klonlanıyor..."
   git clone \
     --branch claude/discuss-website-project-MwN4j \
     https://github.com/devrankacan/protokol.git \
     "$APP_DIR"
+  # Yedekleri geri yükle
+  cp -r /tmp/genexa-uploads-backup/. "$APP_DIR/uploads/" 2>/dev/null || true
+  cp -r /tmp/genexa-reports-backup/. "$APP_DIR/reports/" 2>/dev/null || true
 fi
 echo "   ✓ Kod hazır"
 
