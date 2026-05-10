@@ -1,16 +1,18 @@
 #!/bin/bash
 # Genexa CRO — VPS Deployment Script
-# Ubuntu 22.04 / 24.04
+# Ubuntu 22.04 / 24.04  |  Nginx reverse proxy pattern
 # Çalıştır: bash deploy.sh
 
 set -e
 
-APP_DIR="/opt/genexa-cro"
-SERVICE_NAME="genexa-cro"
-PORT=3055
+APP_DIR="/opt/genexa-protokol"
+SERVICE_NAME="genexa-protokol"
+INTERNAL_PORT=13055      # uvicorn bu portu dinler (localhost only)
+PUBLIC_PORT=3055         # nginx dışarıya bu portu açar
+NGINX_CONF="genexa-protokol"
 
 echo "======================================================"
-echo "  Genexa CRO — VPS Kurulum Scripti"
+echo "  Genexa CRO Protokol Analizörü — VPS Kurulum"
 echo "======================================================"
 
 # ── 1. Sistem paketleri ────────────────────────────────────────────────────────
@@ -24,17 +26,15 @@ apt-get install -y -qq \
   libpango-1.0-0 libpangoft2-1.0-0 libgdk-pixbuf2.0-0 \
   libffi-dev libcairo2 libpangocairo-1.0-0 \
   fonts-liberation fonts-dejavu \
-  ufw curl
+  ufw
 
 echo "   ✓ Sistem paketleri hazır"
 
 # ── 2. Uygulama dizini ─────────────────────────────────────────────────────────
 echo ""
-echo ">> Uygulama dizini hazırlanıyor: $APP_DIR"
-mkdir -p "$APP_DIR"
+echo ">> Uygulama dizini: $APP_DIR"
 mkdir -p "$APP_DIR/uploads"
 mkdir -p "$APP_DIR/reports"
-echo "   ✓ Dizinler oluşturuldu"
 
 # ── 3. Repo klonla veya güncelle ───────────────────────────────────────────────
 echo ""
@@ -62,18 +62,14 @@ echo "   ✓ Python bağımlılıkları kuruldu"
 echo ""
 if [ ! -f "$APP_DIR/.env" ]; then
   cp "$APP_DIR/.env.example" "$APP_DIR/.env"
+  GENERATED_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))')
+  sed -i "s/change-this-to-a-random-secret-key-in-production/$GENERATED_KEY/" "$APP_DIR/.env"
+
   echo ""
-  echo "   ⚠️  .env dosyası oluşturuldu."
-  echo "   Lütfen aşağıdaki komutla API key ve şifreyi girin:"
+  echo "   ⚠️  .env dosyası oluşturuldu. ANTHROPIC_API_KEY ve APP_PASSWORD girilmeli."
   echo ""
-  echo "   nano $APP_DIR/.env"
-  echo ""
-  echo "   Gerekli değerler:"
-  echo "   ANTHROPIC_API_KEY=sk-ant-..."
-  echo "   APP_PASSWORD=güçlü-bir-şifre"
-  echo "   SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
-  echo ""
-  read -p "   .env düzenlemeyi şimdi yapmak ister misiniz? (e/h): " answer
+  echo "   Şimdi düzenlemek ister misiniz? (e/h):"
+  read -r answer
   if [ "$answer" = "e" ]; then
     nano "$APP_DIR/.env"
   fi
@@ -83,7 +79,7 @@ fi
 
 # ── 6. Systemd servisi ─────────────────────────────────────────────────────────
 echo ""
-echo ">> Systemd servisi yapılandırılıyor..."
+echo ">> Systemd servisi oluşturuluyor..."
 
 cat > /etc/systemd/system/${SERVICE_NAME}.service << EOF
 [Unit]
@@ -96,7 +92,7 @@ User=root
 WorkingDirectory=${APP_DIR}/backend
 Environment="PATH=${APP_DIR}/.venv/bin"
 EnvironmentFile=${APP_DIR}/.env
-ExecStart=${APP_DIR}/.venv/bin/uvicorn main:app --host 0.0.0.0 --port ${PORT} --workers 2
+ExecStart=${APP_DIR}/.venv/bin/uvicorn main:app --host 127.0.0.1 --port ${INTERNAL_PORT} --workers 2
 Restart=always
 RestartSec=5
 StandardOutput=journal
@@ -108,27 +104,63 @@ EOF
 
 systemctl daemon-reload
 systemctl enable "${SERVICE_NAME}"
-echo "   ✓ Systemd servisi oluşturuldu ve etkinleştirildi"
+echo "   ✓ Systemd servisi hazır (uvicorn → 127.0.0.1:${INTERNAL_PORT})"
 
-# ── 7. Firewall ────────────────────────────────────────────────────────────────
+# ── 7. Nginx yapılandırması ────────────────────────────────────────────────────
 echo ""
-echo ">> Firewall yapılandırılıyor..."
-ufw allow ssh
-ufw allow "${PORT}/tcp"
-ufw --force enable
-echo "   ✓ Port ${PORT} açıldı"
+echo ">> Nginx yapılandırması ekleniyor..."
 
-# ── 8. Servisi başlat ──────────────────────────────────────────────────────────
+cat > /etc/nginx/sites-available/${NGINX_CONF} << EOF
+server {
+    listen ${PUBLIC_PORT};
+    server_name _;
+
+    client_max_body_size 60M;
+
+    # Zaman aşımı — Claude analizi uzun sürebilir
+    proxy_read_timeout 180s;
+    proxy_connect_timeout 10s;
+    proxy_send_timeout 180s;
+
+    location / {
+        proxy_pass http://127.0.0.1:${INTERNAL_PORT};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_buffering off;
+    }
+}
+EOF
+
+# sites-enabled'a ekle (varsa üzerine yaz)
+ln -sf /etc/nginx/sites-available/${NGINX_CONF} /etc/nginx/sites-enabled/${NGINX_CONF}
+
+# Nginx yapılandırmasını test et
+nginx -t
+systemctl reload nginx
+echo "   ✓ Nginx yapılandırması aktif (port ${PUBLIC_PORT} → 127.0.0.1:${INTERNAL_PORT})"
+
+# ── 8. Firewall ────────────────────────────────────────────────────────────────
+echo ""
+echo ">> Firewall: port ${PUBLIC_PORT} açılıyor..."
+ufw allow ssh
+ufw allow "${PUBLIC_PORT}/tcp"
+ufw --force enable
+echo "   ✓ Port ${PUBLIC_PORT} açıldı"
+
+# ── 9. Servisi başlat ──────────────────────────────────────────────────────────
 echo ""
 echo ">> Servis başlatılıyor..."
 systemctl restart "${SERVICE_NAME}"
-sleep 3
+sleep 4
 
 if systemctl is-active --quiet "${SERVICE_NAME}"; then
   echo "   ✓ Servis çalışıyor!"
 else
   echo "   ✗ Servis başlatılamadı. Log:"
-  journalctl -u "${SERVICE_NAME}" --no-pager -n 20
+  journalctl -u "${SERVICE_NAME}" --no-pager -n 30
   exit 1
 fi
 
@@ -138,12 +170,15 @@ echo "======================================================"
 echo "  KURULUM TAMAMLANDI ✓"
 echo "======================================================"
 echo ""
-echo "  Adres:   http://$(curl -s ifconfig.me 2>/dev/null || echo 'IP_ADRESINIZ'):${PORT}"
-echo "  Şifre:   .env dosyasındaki APP_PASSWORD değeri"
+echo "  Adres  →  http://$(curl -s ifconfig.me 2>/dev/null || echo '158.220.115.16'):${PUBLIC_PORT}"
+echo "  Şifre  →  .env dosyasındaki APP_PASSWORD değeri"
 echo ""
-echo "  Faydalı komutlar:"
-echo "  Durum   → systemctl status ${SERVICE_NAME}"
-echo "  Log     → journalctl -u ${SERVICE_NAME} -f"
-echo "  Restart → systemctl restart ${SERVICE_NAME}"
-echo "  Durdur  → systemctl stop ${SERVICE_NAME}"
+echo "  Mevcut siteler etkilenmedi:"
+echo "    genexacro  (port 8080)  → değişmedi"
+echo "    diğer siteler           → değişmedi"
+echo ""
+echo "  Yönetim komutları:"
+echo "    systemctl status ${SERVICE_NAME}"
+echo "    journalctl -u ${SERVICE_NAME} -f"
+echo "    systemctl restart ${SERVICE_NAME}"
 echo ""
