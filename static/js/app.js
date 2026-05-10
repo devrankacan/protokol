@@ -80,6 +80,16 @@ async function uploadProtocol(input) {
 }
 
 
+// ── Language Toggle ───────────────────────────────────────────────────────────
+
+function setLang(lang) {
+  document.getElementById('report-language').value = lang;
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('lang-btn-active', btn.dataset.lang === lang);
+  });
+}
+
+
 // ── Patient Analysis ──────────────────────────────────────────────────────────
 
 async function analyzePatient(input) {
@@ -87,26 +97,40 @@ async function analyzePatient(input) {
   if (!file) return;
 
   const patientId = document.getElementById('patient-id')?.value?.trim() || '';
+  const language  = document.getElementById('report-language')?.value || 'tr';
   const progress  = document.getElementById('patient-progress');
   const fill      = document.getElementById('patient-progress-fill');
   const text      = document.getElementById('patient-progress-text');
   const result    = document.getElementById('patient-result');
 
-  showProgress(progress, fill, text, 'Claude AI analiz yapıyor — lütfen bekleyin (~30-60 sn)...', true);
+  const isTR = language === 'tr';
+  const waitMsg = isTR
+    ? 'Claude AI analiz yapıyor — lütfen bekleyin (~30-60 sn)...'
+    : 'Claude AI is analyzing — please wait (~30-60 sec)...';
+
+  showProgress(progress, fill, text, waitMsg, true);
   hideEl(result);
 
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('language', language);
   if (patientId) formData.append('patient_id', patientId);
 
   // Cycle status messages during long analysis
-  const messages = [
+  const messages = isTR ? [
     'Protokol kriterleri karşılaştırılıyor...',
     'Biyomarker değerleri analiz ediliyor...',
     'Klinik bulgular değerlendiriliyor...',
     'Kohort önerisi hesaplanıyor...',
     'Risk değerlendirmesi yapılıyor...',
     'Rapor oluşturuluyor...',
+  ] : [
+    'Comparing protocol criteria...',
+    'Analyzing biomarker values...',
+    'Evaluating clinical findings...',
+    'Calculating cohort recommendation...',
+    'Performing risk assessment...',
+    'Generating report...',
   ];
   let msgIdx = 0;
   const msgTimer = setInterval(() => {

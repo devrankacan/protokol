@@ -7,13 +7,14 @@ BASE_DIR = Path(__file__).parent.parent
 TEMPLATES_DIR = BASE_DIR / "templates"
 
 
-async def generate_report_pdf(report_data: dict, patient_id: str, output_path: Path):
+async def generate_report_pdf(report_data: dict, patient_id: str, output_path: Path, language: str = "tr"):
     loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, _render_pdf, report_data, patient_id, output_path)
+    await loop.run_in_executor(None, _render_pdf, report_data, patient_id, output_path, language)
 
 
-def _render_pdf(report_data: dict, patient_id: str, output_path: Path):
+def _render_pdf(report_data: dict, patient_id: str, output_path: Path, language: str = "tr"):
     from weasyprint import HTML, CSS
+    from translations import get_labels
 
     env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
     env.filters["status_icon"] = _status_icon
@@ -27,6 +28,8 @@ def _render_pdf(report_data: dict, patient_id: str, output_path: Path):
         report=report_data,
         patient_id=patient_id,
         generated_at=datetime.now().strftime("%d.%m.%Y %H:%M"),
+        L=get_labels(language),
+        lang=language,
     )
 
     css = CSS(string=_pdf_css())

@@ -1,33 +1,33 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="{{ lang }}">
 <head>
   <meta charset="UTF-8">
-  <title>Genexa CRO Raporu</title>
+  <title>Genexa CRO</title>
 </head>
 <body>
 
 <!-- Header -->
 <div class="report-header">
-  <h1>KLİNİK ARAŞTIRMA DEĞERLENDİRME RAPORU</h1>
-  <div class="subtitle">Genexa Clinical Research Organization — Protokol Uygunluk Analizi</div>
-  <div class="meta">Hasta: {{ patient_id }} &nbsp;|&nbsp; Rapor Tarihi: {{ generated_at }}</div>
+  <h1>{{ L.report_title }}</h1>
+  <div class="subtitle">{{ L.report_subtitle }}</div>
+  <div class="meta">{{ L.patient_label }}: {{ patient_id }} &nbsp;|&nbsp; {{ L.report_date_label }}: {{ generated_at }}</div>
 </div>
 
 <!-- Section 1: Patient Summary -->
 {% set ozet = report.hasta_ozet %}
 <div class="section">
-  <div class="section-header">01 &nbsp; HASTA KİMLİK ÖZETİ</div>
+  <div class="section-header">01 &nbsp; {{ L.s1_title }}</div>
   <div class="section-body">
     <div class="info-grid">
-      {% if ozet.isim_soyisim %}<div class="info-item"><span class="info-label">Ad Soyad</span><span class="info-value">{{ ozet.isim_soyisim }}</span></div>{% endif %}
-      {% if ozet.dogum_tarihi %}<div class="info-item"><span class="info-label">Doğum Tarihi</span><span class="info-value">{{ ozet.dogum_tarihi }}</span></div>{% endif %}
-      {% if ozet.yas %}<div class="info-item"><span class="info-label">Yaş</span><span class="info-value">{{ ozet.yas }}</span></div>{% endif %}
-      {% if ozet.cinsiyet %}<div class="info-item"><span class="info-label">Cinsiyet</span><span class="info-value">{{ ozet.cinsiyet }}</span></div>{% endif %}
-      {% if ozet.agirlik %}<div class="info-item"><span class="info-label">Ağırlık</span><span class="info-value">{{ ozet.agirlik }}</span></div>{% endif %}
-      {% if ozet.boy %}<div class="info-item"><span class="info-label">Boy</span><span class="info-value">{{ ozet.boy }}</span></div>{% endif %}
-      {% if ozet.bsa %}<div class="info-item"><span class="info-label">BSA</span><span class="info-value">{{ ozet.bsa }}</span></div>{% endif %}
-      {% if ozet.tani %}<div class="info-item"><span class="info-label">Tanı</span><span class="info-value">{{ ozet.tani }}</span></div>{% endif %}
-      {% if ozet.mutasyon %}<div class="info-item"><span class="info-label">Mutasyon</span><span class="info-value">{{ ozet.mutasyon }}</span></div>{% endif %}
+      {% if ozet.isim_soyisim %}<div class="info-item"><span class="info-label">{{ L.full_name }}</span><span class="info-value">{{ ozet.isim_soyisim }}</span></div>{% endif %}
+      {% if ozet.dogum_tarihi %}<div class="info-item"><span class="info-label">{{ L.dob }}</span><span class="info-value">{{ ozet.dogum_tarihi }}</span></div>{% endif %}
+      {% if ozet.yas %}<div class="info-item"><span class="info-label">{{ L.age }}</span><span class="info-value">{{ ozet.yas }}</span></div>{% endif %}
+      {% if ozet.cinsiyet %}<div class="info-item"><span class="info-label">{{ L.gender }}</span><span class="info-value">{{ ozet.cinsiyet }}</span></div>{% endif %}
+      {% if ozet.agirlik %}<div class="info-item"><span class="info-label">{{ L.weight }}</span><span class="info-value">{{ ozet.agirlik }}</span></div>{% endif %}
+      {% if ozet.boy %}<div class="info-item"><span class="info-label">{{ L.height }}</span><span class="info-value">{{ ozet.boy }}</span></div>{% endif %}
+      {% if ozet.bsa %}<div class="info-item"><span class="info-label">{{ L.bsa }}</span><span class="info-value">{{ ozet.bsa }}</span></div>{% endif %}
+      {% if ozet.tani %}<div class="info-item"><span class="info-label">{{ L.diagnosis }}</span><span class="info-value">{{ ozet.tani }}</span></div>{% endif %}
+      {% if ozet.mutasyon %}<div class="info-item"><span class="info-label">{{ L.mutation }}</span><span class="info-value">{{ ozet.mutasyon }}</span></div>{% endif %}
     </div>
   </div>
 </div>
@@ -35,11 +35,17 @@
 <!-- Section 2: Eligibility -->
 {% set uyg = report.uygunluk_degerlendirmesi %}
 <div class="section">
-  <div class="section-header">02 &nbsp; PROTOKOL UYGUNLUK DEĞERLENDİRMESİ — {{ uyg.ozet }}</div>
+  <div class="section-header">02 &nbsp; {{ L.s2_title }} — {{ uyg.ozet }}</div>
   <div class="section-body" style="padding:0">
     <table>
       <thead>
-        <tr><th>Kategori</th><th>Kriter</th><th>Beklenen</th><th>Hasta Değeri</th><th>Durum</th></tr>
+        <tr>
+          <th>{{ L.th_category }}</th>
+          <th>{{ L.th_criterion }}</th>
+          <th>{{ L.th_expected }}</th>
+          <th>{{ L.th_patient_value }}</th>
+          <th>{{ L.th_status }}</th>
+        </tr>
       </thead>
       <tbody>
         {% for k in uyg.kriterler %}
@@ -59,12 +65,19 @@
 <!-- Section 3: Biomarkers -->
 {% set bio = report.biyomarker_analizi %}
 <div class="section">
-  <div class="section-header">03 &nbsp; BİYOMARKER ANALİZİ</div>
+  <div class="section-header">03 &nbsp; {{ L.s3_title }}</div>
   <div class="section-body">
     <p style="margin-bottom:8px;font-size:8.5pt;color:#37474F">{{ bio.ozet }}</p>
     <table>
       <thead>
-        <tr><th>Parametre</th><th>Hasta Değeri</th><th>Protokol Eşiği</th><th>Birim</th><th>Durum</th><th>Klinik Yorum</th></tr>
+        <tr>
+          <th>{{ L.th_parameter }}</th>
+          <th>{{ L.th_patient_val }}</th>
+          <th>{{ L.th_threshold }}</th>
+          <th>{{ L.th_unit }}</th>
+          <th>{{ L.th_status }}</th>
+          <th>{{ L.th_clinical }}</th>
+        </tr>
       </thead>
       <tbody>
         {% for b in bio.degerler %}
@@ -85,12 +98,16 @@
 <!-- Section 4: Clinical Findings -->
 {% set klin = report.klinik_bulgular %}
 <div class="section">
-  <div class="section-header">04 &nbsp; KLİNİK BULGULAR</div>
+  <div class="section-header">04 &nbsp; {{ L.s4_title }}</div>
   <div class="section-body">
     <p style="margin-bottom:8px;font-size:8.5pt;color:#37474F">{{ klin.ozet }}</p>
     <table>
       <thead>
-        <tr><th>Bulgu</th><th>Değer</th><th>Yorum</th></tr>
+        <tr>
+          <th>{{ L.th_finding }}</th>
+          <th>{{ L.th_value }}</th>
+          <th>{{ L.th_interpretation }}</th>
+        </tr>
       </thead>
       <tbody>
         {% for b in klin.bulgular %}
@@ -108,13 +125,13 @@
 <!-- Section 5: Cohort -->
 {% set koh = report.kohort_onerisi %}
 <div class="section">
-  <div class="section-header">05 &nbsp; KOHORT / PART ÖNERİSİ</div>
+  <div class="section-header">05 &nbsp; {{ L.s5_title }}</div>
   <div class="section-body">
     <div class="kohort-box">
       <div class="kohort-title">{{ koh.onerilen_part }} — {{ koh.onerilen_kohort }}</div>
-      <div class="kohort-field"><span class="label">Başlangıç Dozu:</span><span class="value">{{ koh.baslangic_dozu }}</span></div>
-      <div class="kohort-field"><span class="label">Gerekçe:</span><span class="value">{{ koh.gerekce }}</span></div>
-      {% if koh.ek_notlar %}<div class="kohort-field"><span class="label">Ek Notlar:</span><span class="value">{{ koh.ek_notlar }}</span></div>{% endif %}
+      <div class="kohort-field"><span class="label">{{ L.starting_dose }}:</span><span class="value">{{ koh.baslangic_dozu }}</span></div>
+      <div class="kohort-field"><span class="label">{{ L.rationale }}:</span><span class="value">{{ koh.gerekce }}</span></div>
+      {% if koh.ek_notlar %}<div class="kohort-field"><span class="label">{{ L.additional_notes }}:</span><span class="value">{{ koh.ek_notlar }}</span></div>{% endif %}
     </div>
   </div>
 </div>
@@ -122,7 +139,7 @@
 <!-- Section 6: Risk -->
 {% set rsk = report.risk_degerlendirmesi %}
 <div class="section">
-  <div class="section-header">06 &nbsp; RİSK DEĞERLENDİRMESİ — GENEL RİSK: {{ rsk.genel_risk }}</div>
+  <div class="section-header">06 &nbsp; {{ L.s6_title }} — {{ L.general_risk }}: {{ rsk.genel_risk }}</div>
   <div class="section-body">
     {% for r in rsk.riskler %}
     <div class="risk-item {{ r.seviye | risk_class }}">
@@ -134,7 +151,7 @@
     </div>
     {% endfor %}
     {% if rsk.onerilen_izlem %}
-    <p style="margin-top:10px;font-size:8.5pt;"><strong>Önerilen İzlem:</strong> {{ rsk.onerilen_izlem }}</p>
+    <p style="margin-top:10px;font-size:8.5pt;"><strong>{{ L.recommended_monitoring }}:</strong> {{ rsk.onerilen_izlem }}</p>
     {% endif %}
   </div>
 </div>
@@ -142,7 +159,7 @@
 <!-- Section 7: Final Decision -->
 {% set karar = report.genel_karar %}
 <div class="section">
-  <div class="section-header">07 &nbsp; GENEL KARAR</div>
+  <div class="section-header">07 &nbsp; {{ L.s7_title }}</div>
   <div class="section-body">
     <div class="decision-box {{ karar.durum | durum_class }}">
       <div class="decision-title">{{ karar.durum | durum_icon }} {{ karar.metin }}</div>
@@ -153,8 +170,7 @@
 
 <!-- Footer -->
 <div class="footer">
-  Bu rapor Genexa CRO Protokol Analiz Platformu tarafından otomatik olarak üretilmiştir.
-  Klinik kararlar yetkili araştırmacı tarafından verilmelidir. &nbsp;|&nbsp; {{ generated_at }}
+  {{ L.footer_auto }} &nbsp;|&nbsp; {{ L.footer_disclaimer }} &nbsp;|&nbsp; {{ generated_at }}
 </div>
 
 </body>

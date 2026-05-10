@@ -15,6 +15,7 @@ load_dotenv()
 from auth import verify_password, create_session_token, verify_session_token, SESSION_COOKIE
 from analyzer import ProtocolAnalyzer
 from pdf_gen import generate_report_pdf
+from translations import get_labels
 
 BASE_DIR = Path(__file__).parent.parent
 UPLOADS_DIR = BASE_DIR / "uploads"
@@ -162,6 +163,7 @@ async def analyze_patient(
     request: Request,
     file: UploadFile = File(...),
     patient_id: str = Form(default=""),
+    language: str = Form(default="tr"),
 ):
     if not get_current_user(request):
         raise HTTPException(status_code=401)
@@ -171,6 +173,8 @@ async def analyze_patient(
 
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Sadece PDF dosyaları kabul edilir.")
+
+    lang = language if language in ("tr", "en") else "tr"
 
     content = await file.read()
     tmp_path = UPLOADS_DIR / f"patient_{uuid.uuid4().hex}.pdf"
@@ -183,15 +187,16 @@ async def analyze_patient(
 
         protocol_text = PROTOCOL_TEXT_PATH.read_text(encoding="utf-8")
 
-        report_data = await analyzer.analyze(protocol_text, patient_text)
+        report_data = await analyzer.analyze(protocol_text, patient_text, language=lang)
 
         report_id = uuid.uuid4().hex[:12]
-        pid = patient_id.strip() or report_data.get("hasta_id", f"Hasta-{report_id[:6]}")
+        pid = patient_id.strip() or report_data.get("hasta_id", f"Patient-{report_id[:6]}")
 
         meta = {
             "report_id": report_id,
             "patient_id": pid,
             "filename": file.filename,
+            "language": lang,
             "created_at": datetime.now().isoformat(),
             "karar": report_data.get("genel_karar", {}).get("durum", ""),
             "karar_text": report_data.get("genel_karar", {}).get("metin", ""),
@@ -201,12 +206,13 @@ async def analyze_patient(
         )
 
         pdf_path = REPORTS_DIR / f"{report_id}.pdf"
-        await generate_report_pdf(report_data, pid, pdf_path)
+        await generate_report_pdf(report_data, pid, pdf_path, language=lang)
 
         return JSONResponse({
             "success": True,
             "report_id": report_id,
             "patient_id": pid,
+            "language": lang,
             "karar": meta["karar"],
             "karar_text": meta["karar_text"],
         })
@@ -226,11 +232,14 @@ async def view_report(request: Request, report_id: str):
         raise HTTPException(status_code=404, detail="Rapor bulunamadı.")
 
     data = json.loads(json_path.read_text())
+    lang = data.get("language", "tr")
     return templates.TemplateResponse("report_view.html", {
         "request": request,
         "report": data.get("report", {}),
         "meta": {k: v for k, v in data.items() if k != "report"},
         "report_id": report_id,
+        "L": get_labels(lang),
+        "lang": lang,
     })
 
 
@@ -245,12 +254,17 @@ async def download_report(request: Request, report_id: str):
 
     json_path = REPORTS_DIR / f"{report_id}.json"
     patient_id = report_id
+    lang = "tr"
     if json_path.exists():
         meta = json.loads(json_path.read_text())
         patient_id = meta.get("patient_id", report_id)
+        lang = meta.get("language", "tr")
+
+    labels = get_labels(lang)
+    prefix = labels["pdf_filename_prefix"]
 
     return FileResponse(
         path=str(pdf_path),
         media_type="application/pdf",
-        filename=f"Genexa_CRO_Rapor_{patient_id}.pdf",
+        filename=f"{prefix}_{patient_id}.pdf",
     )
