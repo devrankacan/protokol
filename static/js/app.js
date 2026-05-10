@@ -96,8 +96,9 @@ async function analyzePatient(input) {
   const file = input.files[0];
   if (!file) return;
 
-  const patientId = document.getElementById('patient-id')?.value?.trim() || '';
-  const language  = document.getElementById('report-language')?.value || 'tr';
+  const patientId   = document.getElementById('patient-id')?.value?.trim() || '';
+  const language    = document.getElementById('report-language')?.value || 'tr';
+  const includeLogo = document.getElementById('include-logo')?.value || '0';
   const progress  = document.getElementById('patient-progress');
   const fill      = document.getElementById('patient-progress-fill');
   const text      = document.getElementById('patient-progress-text');
@@ -114,6 +115,7 @@ async function analyzePatient(input) {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('language', language);
+  formData.append('include_logo', includeLogo);
   if (patientId) formData.append('patient_id', patientId);
 
   // Cycle status messages during long analysis
@@ -166,6 +168,18 @@ async function analyzePatient(input) {
     hideProgress(progress);
     input.value = '';
   }
+}
+
+
+// ── Logo Toggle ───────────────────────────────────────────────────────────────
+
+function toggleLogo() {
+  const btn = document.getElementById('logo-toggle-btn');
+  const input = document.getElementById('include-logo');
+  const label = document.getElementById('logo-toggle-label');
+  const isActive = btn.classList.toggle('active');
+  input.value = isActive ? '1' : '0';
+  label.textContent = isActive ? 'Logo Aktif' : 'Logo Ekle';
 }
 
 

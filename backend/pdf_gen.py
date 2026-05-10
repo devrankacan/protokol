@@ -53,12 +53,12 @@ td { padding: 5px 8px; border-bottom: 1px solid #e0e8f0; vertical-align: top; }
 """
 
 
-async def generate_report_pdf(report_data: dict, patient_id: str, output_path: Path, language: str = "tr"):
+async def generate_report_pdf(report_data: dict, patient_id: str, output_path: Path, language: str = "tr", show_logo: bool = False):
     loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, _render_pdf, report_data, patient_id, output_path, language)
+    await loop.run_in_executor(None, _render_pdf, report_data, patient_id, output_path, language, show_logo)
 
 
-def _render_pdf(report_data: dict, patient_id: str, output_path: Path, language: str = "tr"):
+def _render_pdf(report_data: dict, patient_id: str, output_path: Path, language: str = "tr", show_logo: bool = False):
     from xhtml2pdf import pisa
     from translations import get_labels
 
@@ -69,7 +69,7 @@ def _render_pdf(report_data: dict, patient_id: str, output_path: Path, language:
     env.filters["durum_class"] = _durum_class
     env.filters["risk_class"] = _risk_class
 
-    logo_src = f"file://{LOGO_PATH}" if LOGO_PATH.exists() else ""
+    logo_src = f"file://{LOGO_PATH}" if (show_logo and LOGO_PATH.exists()) else ""
 
     template = env.get_template("report_template.html")
     html_content = template.render(

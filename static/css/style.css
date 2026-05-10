@@ -1005,6 +1005,42 @@ button { cursor: pointer; font-family: inherit; }
   box-shadow: 0 1px 5px rgba(107,15,26,.12);
 }
 
+/* ── Logo Toggle ──────────────────────────────────────────────────────────── */
+.logo-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #F0F2F5;
+  border: 2px solid var(--border);
+  border-radius: 30px;
+  padding: 6px 14px 6px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: background .2s, border-color .2s, color .2s;
+  width: fit-content;
+}
+
+.logo-toggle-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #B0BEC5;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+
+.logo-toggle-btn.active {
+  background: #FFF0F2;
+  border-color: var(--navy-mid);
+  color: var(--navy);
+}
+
+.logo-toggle-btn.active .logo-toggle-dot {
+  background: var(--navy-mid);
+}
+
 /* ── Logo Upload Bar ──────────────────────────────────────────────────────── */
 .logo-upload-bar {
   display: flex;

@@ -187,6 +187,7 @@ async def analyze_patient(
     file: UploadFile = File(...),
     patient_id: str = Form(default=""),
     language: str = Form(default="tr"),
+    include_logo: str = Form(default="0"),
 ):
     if not get_current_user(request):
         raise HTTPException(status_code=401)
@@ -229,7 +230,7 @@ async def analyze_patient(
         )
 
         pdf_path = REPORTS_DIR / f"{report_id}.pdf"
-        await generate_report_pdf(report_data, pid, pdf_path, language=lang)
+        await generate_report_pdf(report_data, pid, pdf_path, language=lang, show_logo=(include_logo == "1"))
 
         return JSONResponse({
             "success": True,
