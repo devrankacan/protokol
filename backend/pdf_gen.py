@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import sys
 from pathlib import Path
 from datetime import datetime
@@ -7,15 +8,26 @@ from jinja2 import Environment, FileSystemLoader
 BASE_DIR = Path(__file__).parent.parent
 TEMPLATES_DIR = BASE_DIR / "templates"
 LOGO_PATH = BASE_DIR / "static" / "images" / "logo.png"
+DEJAVU_FONT = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
+DEJAVU_BOLD = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
 
-PDF_CSS = """
-@page { size: A4; margin: 15mm 12mm; }
-body { font-family: Helvetica, Arial, sans-serif; font-size: 9pt; color: #1a1a2e; line-height: 1.4; }
+def _font_face_css() -> str:
+    if not DEJAVU_FONT.exists():
+        return ""
+    css = f"@font-face {{ font-family: DejaVu; src: url('file://{DEJAVU_FONT}'); font-weight: normal; }}\n"
+    if DEJAVU_BOLD.exists():
+        css += f"@font-face {{ font-family: DejaVu; src: url('file://{DEJAVU_BOLD}'); font-weight: bold; }}\n"
+    return css
+
+PDF_CSS_BASE = """
+@page {{ size: A4; margin: 15mm 12mm; }}
+{font_face}
+body {{ font-family: {font_family}; font-size: 9pt; color: #1a1a2e; line-height: 1.4; }}
 
 .report-header { background-color: #6B0F1A; color: white; padding: 14px 18px; margin-bottom: 14px; }
 .report-header-inner { display: flex; align-items: center; }
-.report-header-logo { margin-right: 14px; }
-.report-header-logo img { height: 36px; width: auto; }
+.report-header-logo { margin-right: 18px; }
+.report-header-logo img { height: 48px; width: auto; }
 .report-header h1 { font-size: 14pt; font-weight: bold; margin: 0 0 4px 0; color: white; }
 .report-header .subtitle { font-size: 9pt; color: #f0c0c8; margin: 0; }
 .report-header .meta { font-size: 8pt; color: #d9a0aa; margin: 6px 0 0 0; }
@@ -69,7 +81,18 @@ def _render_pdf(report_data: dict, patient_id: str, output_path: Path, language:
     env.filters["durum_class"] = _durum_class
     env.filters["risk_class"] = _risk_class
 
-    logo_src = f"file://{LOGO_PATH}" if (show_logo and LOGO_PATH.exists()) else ""
+    # Build CSS with font support
+    font_face = _font_face_css()
+    font_family = "DejaVu, Helvetica, Arial, sans-serif" if font_face else "Helvetica, Arial, sans-serif"
+    pdf_css = PDF_CSS_BASE.format(font_face=font_face, font_family=font_family)
+
+    # Logo as base64 data URL for reliable embedding
+    logo_src = ""
+    if show_logo and LOGO_PATH.exists():
+        logo_data = base64.b64encode(LOGO_PATH.read_bytes()).decode()
+        ext = LOGO_PATH.suffix.lstrip(".").lower()
+        mime = "image/png" if ext == "png" else f"image/{ext}"
+        logo_src = f"data:{mime};base64,{logo_data}"
 
     template = env.get_template("report_template.html")
     html_content = template.render(
@@ -78,7 +101,7 @@ def _render_pdf(report_data: dict, patient_id: str, output_path: Path, language:
         generated_at=datetime.now().strftime("%d.%m.%Y %H:%M"),
         L=get_labels(language),
         lang=language,
-        pdf_css=PDF_CSS,
+        pdf_css=pdf_css,
         logo_src=logo_src,
     )
 
