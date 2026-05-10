@@ -162,7 +162,7 @@ CRITERIA_KEYWORDS = [
     "dahil etme", "dışlama", "uygunluk", "doz", "kohort", "biyomarker",
 ]
 
-MAX_PROTOCOL_CHARS = 24000  # ~6K tokens, leaves room for patient + system prompt
+MAX_PROTOCOL_CHARS = 18000  # ~4.5K tokens, leaves room for patient + system prompt
 
 
 def extract_protocol_criteria(protocol_text: str) -> str:
