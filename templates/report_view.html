@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Genexa CRO — Rapor: {{ meta.patient_id }}</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-brand">
+        <div class="nav-logo">G</div>
+        <div class="nav-brand-text">
+          <span class="nav-brand-main">GENEXA</span>
+          <span class="nav-brand-sub">CRO</span>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <a href="/dashboard" class="btn btn-outline btn-sm">← Dashboard</a>
+        <a href="/report/{{ report_id }}/pdf" class="btn btn-primary btn-sm">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          PDF İndir
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content report-view">
+
+    <!-- Report Header -->
+    <div class="report-header-card">
+      <div class="report-header-left">
+        <div class="report-logo-badge">G</div>
+        <div>
+          <h1 class="report-main-title">KLİNİK ARAŞTIRMA DEĞERLENDİRME RAPORU</h1>
+          <p class="report-main-subtitle">Genexa CRO — Protokol Uygunluk Analizi</p>
+        </div>
+      </div>
+      <div class="report-header-meta">
+        <div class="meta-item"><span class="meta-label">Hasta ID</span><span class="meta-value">{{ meta.patient_id }}</span></div>
+        <div class="meta-item"><span class="meta-label">Rapor ID</span><span class="meta-value">{{ report_id }}</span></div>
+        <div class="meta-item"><span class="meta-label">Tarih</span><span class="meta-value">{{ meta.created_at[:16].replace('T', ' ') }}</span></div>
+      </div>
+    </div>
+
+    <!-- Decision Banner -->
+    {% set karar = report.genel_karar %}
+    <div class="decision-banner
+      {% if karar.durum == 'UYGUN' %}decision-banner-ok
+      {% elif karar.durum in ['UYGUN_DEGIL', 'UYGUN DEĞİL'] %}decision-banner-fail
+      {% else %}decision-banner-warn{% endif %}">
+      <div class="decision-icon">
+        {% if karar.durum == 'UYGUN' %}✅{% elif karar.durum in ['UYGUN_DEGIL', 'UYGUN DEĞİL'] %}❌{% else %}⚠️{% endif %}
+      </div>
+      <div class="decision-text">
+        <div class="decision-main">{{ karar.metin }}</div>
+        <div class="decision-detail">{{ karar.detay }}</div>
+      </div>
+    </div>
+
+    <!-- Section 1: Patient Summary -->
+    {% set ozet = report.hasta_ozet %}
+    <div class="report-section">
+      <div class="report-section-header">
+        <span class="section-num">01</span>
+        <span>HASTA KİMLİK ÖZETİ</span>
+      </div>
+      <div class="report-section-body">
+        <div class="info-grid">
+          {% if ozet.isim_soyisim %}<div class="info-item"><span class="info-label">Ad Soyad</span><span class="info-value">{{ ozet.isim_soyisim }}</span></div>{% endif %}
+          {% if ozet.dogum_tarihi %}<div class="info-item"><span class="info-label">Doğum Tarihi</span><span class="info-value">{{ ozet.dogum_tarihi }}</span></div>{% endif %}
+          {% if ozet.yas %}<div class="info-item"><span class="info-label">Yaş</span><span class="info-value">{{ ozet.yas }}</span></div>{% endif %}
+          {% if ozet.cinsiyet %}<div class="info-item"><span class="info-label">Cinsiyet</span><span class="info-value">{{ ozet.cinsiyet }}</span></div>{% endif %}
+          {% if ozet.agirlik %}<div class="info-item"><span class="info-label">Ağırlık</span><span class="info-value">{{ ozet.agirlik }}</span></div>{% endif %}
+          {% if ozet.boy %}<div class="info-item"><span class="info-label">Boy</span><span class="info-value">{{ ozet.boy }}</span></div>{% endif %}
+          {% if ozet.bsa %}<div class="info-item"><span class="info-label">BSA</span><span class="info-value">{{ ozet.bsa }}</span></div>{% endif %}
+          {% if ozet.tani %}<div class="info-item"><span class="info-label">Tanı</span><span class="info-value">{{ ozet.tani }}</span></div>{% endif %}
+          {% if ozet.mutasyon %}<div class="info-item"><span class="info-label">Mutasyon</span><span class="info-value">{{ ozet.mutasyon }}</span></div>{% endif %}
+          {% if ozet.basvuru_tarihi %}<div class="info-item"><span class="info-label">Başvuru</span><span class="info-value">{{ ozet.basvuru_tarihi }}</span></div>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Eligibility -->
+    {% set uygunluk = report.uygunluk_degerlendirmesi %}
+    <div class="report-section">
+      <div class="report-section-header">
+        <span class="section-num">02</span>
+        <span>PROTOKOL UYGUNLUK DEĞERLENDİRMESİ</span>
+        <span class="section-badge
+          {% if 'UYGUN' in uygunluk.ozet and 'DEĞİL' not in uygunluk.ozet %}badge-success
+          {% elif 'UYGUN DEĞİL' in uygunluk.ozet %}badge-danger
+          {% else %}badge-warn{% endif %}">{{ uygunluk.ozet }}</span>
+      </div>
+      <div class="report-section-body no-pad">
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Kategori</th>
+                <th>Kriter</th>
+                <th>Beklenen</th>
+                <th>Hasta Değeri</th>
+                <th>Durum</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for k in uygunluk.kriterler %}
+              <tr class="
+                {% if k.durum == 'KARŞILANDI' %}row-ok
+                {% elif k.durum == 'KARŞILANMADI' %}row-fail
+                {% else %}row-warn{% endif %}">
+                <td><span class="kategori-tag
+                  {% if k.kategori == 'Dahil Etme' %}tag-include
+                  {% else %}tag-exclude{% endif %}">{{ k.kategori }}</span></td>
+                <td class="td-kriter">{{ k.kriter }}</td>
+                <td class="td-expected">{{ k.beklenen }}</td>
+                <td class="td-value">{{ k.hasta_degeri }}</td>
+                <td class="td-status-cell">
+                  <span class="status-chip
+                    {% if k.durum == 'KARŞILANDI' %}chip-ok
+                    {% elif k.durum == 'KARŞILANMADI' %}chip-fail
+                    {% else %}chip-warn{% endif %}">
+                    {% if k.durum == 'KARŞILANDI' %}✅{% elif k.durum == 'KARŞILANMADI' %}❌{% else %}⚠️{% endif %}
+                    {{ k.durum }}
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Biomarkers -->
+    {% set bio = report.biyomarker_analizi %}
+    <div class="report-section">
+      <div class="report-section-header">
+        <span class="section-num">03</span>
+        <span>BİYOMARKER ANALİZİ</span>
+      </div>
+      <div class="report-section-body">
+        <p class="section-summary">{{ bio.ozet }}</p>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Parametre</th>
+                <th>Hasta Değeri</th>
+                <th>Protokol Eşiği</th>
+                <th>Birim</th>
+                <th>Durum</th>
+                <th>Klinik Yorum</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for b in bio.degerler %}
+              <tr>
+                <td class="td-bold">{{ b.parametre }}</td>
+                <td class="td-value">{{ b.hasta_degeri }}</td>
+                <td>{{ b.protokol_esigi }}</td>
+                <td>{{ b.birim }}</td>
+                <td>
+                  <span class="status-chip
+                    {% if b.durum in ['NORMAL', 'EŞİK ÜSTÜ'] %}chip-ok
+                    {% elif b.durum in ['EŞİK ALTI'] %}chip-fail
+                    {% else %}chip-warn{% endif %}">
+                    {% if b.durum in ['NORMAL', 'EŞİK ÜSTÜ'] %}✅
+                    {% elif b.durum == 'EŞİK ALTI' %}❌
+                    {% elif b.durum == 'YÜKSEK' %}⬆️
+                    {% elif b.durum == 'DÜŞÜK' %}⬇️
+                    {% else %}—{% endif %}
+                    {{ b.durum }}
+                  </span>
+                </td>
+                <td class="td-yorum">{{ b.klinik_yorum }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: Clinical Findings -->
+    {% set klinik = report.klinik_bulgular %}
+    <div class="report-section">
+      <div class="report-section-header">
+        <span class="section-num">04</span>
+        <span>KLİNİK BULGULAR</span>
+      </div>
+      <div class="report-section-body">
+        <p class="section-summary">{{ klinik.ozet }}</p>
+        <div class="bulgular-grid">
+          {% for b in klinik.bulgular %}
+          <div class="bulgu-card">
+            <div class="bulgu-name">{{ b.bulgu }}</div>
+            <div class="bulgu-value">{{ b.deger }}</div>
+            <div class="bulgu-yorum">{{ b.yorum }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 5: Cohort Recommendation -->
+    {% set kohort = report.kohort_onerisi %}
+    <div class="report-section">
+      <div class="report-section-header">
+        <span class="section-num">05</span>
+        <span>KOHORT / PART ÖNERİSİ</span>
+      </div>
+      <div class="report-section-body">
+        <div class="kohort-box">
+          <div class="kohort-grid">
+            <div class="kohort-item">
+              <span class="kohort-label">Önerilen Part</span>
+              <span class="kohort-value">{{ kohort.onerilen_part }}</span>
+            </div>
+            <div class="kohort-item">
+              <span class="kohort-label">Kohort</span>
+              <span class="kohort-value">{{ kohort.onerilen_kohort }}</span>
+            </div>
+            <div class="kohort-item">
+              <span class="kohort-label">Başlangıç Dozu</span>
+              <span class="kohort-value">{{ kohort.baslangic_dozu }}</span>
+            </div>
+          </div>
+          <div class="kohort-gerekce">
+            <span class="kohort-label">Gerekçe</span>
+            <p>{{ kohort.gerekce }}</p>
+          </div>
+          {% if kohort.ek_notlar %}
+          <div class="kohort-notlar">
+            <span class="kohort-label">Ek Notlar</span>
+            <p>{{ kohort.ek_notlar }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 6: Risk -->
+    {% set risk = report.risk_degerlendirmesi %}
+    <div class="report-section">
+      <div class="report-section-header">
+        <span class="section-num">06</span>
+        <span>RİSK DEĞERLENDİRMESİ</span>
+        <span class="section-badge
+          {% if risk.genel_risk == 'DÜŞÜK' %}badge-success
+          {% elif risk.genel_risk == 'ORTA' %}badge-warn
+          {% else %}badge-danger{% endif %}">{{ risk.genel_risk }} RİSK</span>
+      </div>
+      <div class="report-section-body">
+        <div class="risk-list">
+          {% for r in risk.riskler %}
+          <div class="risk-item risk-item-{{ r.seviye|lower|replace('ü','u')|replace('ş','s') }}">
+            <span class="risk-seviye risk-{{ r.seviye|lower|replace('ü','u')|replace('ş','s') }}">{{ r.seviye }}</span>
+            <div class="risk-content">
+              <span class="risk-name">{{ r.risk }}</span>
+              <span class="risk-desc">{{ r.aciklama }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% if risk.onerilen_izlem %}
+        <div class="izlem-box">
+          <span class="izlem-label">Önerilen İzlem</span>
+          <p>{{ risk.onerilen_izlem }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Section 7: Final Decision -->
+    <div class="report-section final-section">
+      <div class="report-section-header">
+        <span class="section-num">07</span>
+        <span>GENEL KARAR</span>
+      </div>
+      <div class="report-section-body">
+        <div class="final-decision
+          {% if karar.durum == 'UYGUN' %}final-ok
+          {% elif karar.durum in ['UYGUN_DEGIL', 'UYGUN DEĞİL'] %}final-fail
+          {% else %}final-warn{% endif %}">
+          <div class="final-icon">
+            {% if karar.durum == 'UYGUN' %}✅{% elif karar.durum in ['UYGUN_DEGIL', 'UYGUN DEĞİL'] %}❌{% else %}⚠️{% endif %}
+          </div>
+          <div class="final-text">
+            <div class="final-metin">{{ karar.metin }}</div>
+            <div class="final-detay">{{ karar.detay }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="report-footer">
+      <p>Bu rapor Genexa CRO Protokol Analiz Platformu tarafından otomatik olarak üretilmiştir.</p>
+      <p>Klinik kararlar yetkili araştırmacı tarafından verilmelidir.</p>
+    </div>
+
+  </main>
+</body>
+</html>

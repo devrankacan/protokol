@@ -1,0 +1,14 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+uploads/*.pdf
+uploads/protocol_text.txt
+uploads/protocol_meta.json
+reports/
+*.egg-info/
+dist/
+build/
+.DS_Store

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Genexa CRO — Dashboard</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-brand">
+        <div class="nav-logo">G</div>
+        <div class="nav-brand-text">
+          <span class="nav-brand-main">GENEXA</span>
+          <span class="nav-brand-sub">CRO</span>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <span class="nav-status">
+          <span class="status-dot {% if protocol_loaded %}status-dot-ok{% else %}status-dot-warn{% endif %}"></span>
+          {% if protocol_loaded %}Protokol Aktif{% else %}Protokol Yüklenmedi{% endif %}
+        </span>
+        <form action="/logout" method="post" style="margin:0">
+          <button type="submit" class="btn btn-outline btn-sm">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+            Çıkış
+          </button>
+        </form>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1 class="page-title">Protokol Analiz Platformu</h1>
+      <p class="page-subtitle">Klinik araştırma protokollerine göre hasta uygunluk değerlendirmesi</p>
+    </div>
+
+    <!-- Step Cards -->
+    <div class="step-grid">
+
+      <!-- Step 1: Protocol -->
+      <div class="step-card {% if protocol_loaded %}step-card-done{% endif %}">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <div class="step-header">
+            <h3 class="step-title">Protokol Yükle</h3>
+            {% if protocol_loaded %}
+            <span class="badge badge-success">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              Yüklendi
+            </span>
+            {% else %}
+            <span class="badge badge-warn">Bekleniyor</span>
+            {% endif %}
+          </div>
+
+          {% if protocol_loaded %}
+          <p class="step-desc protocol-name">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+            {{ protocol_name }}
+          </p>
+          {% else %}
+          <p class="step-desc">Temel referans protokolünü PDF olarak yükleyin. Bu protokol tüm hasta analizlerinde kullanılacak.</p>
+          {% endif %}
+
+          <div class="upload-zone" id="protocol-upload-zone">
+            <input type="file" id="protocol-file" accept=".pdf" class="file-input" onchange="uploadProtocol(this)">
+            <label for="protocol-file" class="upload-label">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+              <span class="upload-text">
+                {% if protocol_loaded %}Protokolü Güncelle{% else %}PDF Seç veya Sürükle{% endif %}
+              </span>
+              <span class="upload-hint">Maks. 50MB PDF</span>
+            </label>
+          </div>
+
+          <div id="protocol-progress" class="progress-container hidden">
+            <div class="progress-bar">
+              <div class="progress-fill" id="protocol-progress-fill"></div>
+            </div>
+            <span class="progress-text" id="protocol-progress-text">Yükleniyor...</span>
+          </div>
+          <div id="protocol-result" class="result-msg hidden"></div>
+        </div>
+      </div>
+
+      <!-- Step 2: Patient -->
+      <div class="step-card {% if not protocol_loaded %}step-card-disabled{% endif %}">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <div class="step-header">
+            <h3 class="step-title">Hasta Verisi Analiz Et</h3>
+            {% if protocol_loaded %}
+            <span class="badge badge-primary">Hazır</span>
+            {% else %}
+            <span class="badge badge-muted">Önce Protokol</span>
+            {% endif %}
+          </div>
+          <p class="step-desc">Hasta verilerini içeren PDF dosyasını yükleyin. Yapay zeka protokole göre değerlendirme yapacak.</p>
+
+          <div class="form-group">
+            <label for="patient-id" class="form-label">Hasta ID (opsiyonel)</label>
+            <input
+              type="text"
+              id="patient-id"
+              class="form-input"
+              placeholder="Örn: Hasta-104"
+              {% if not protocol_loaded %}disabled{% endif %}
+            >
+          </div>
+
+          <div class="upload-zone {% if not protocol_loaded %}upload-zone-disabled{% endif %}" id="patient-upload-zone">
+            <input type="file" id="patient-file" accept=".pdf" class="file-input" {% if not protocol_loaded %}disabled{% endif %} onchange="analyzePatient(this)">
+            <label for="patient-file" class="upload-label">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              <span class="upload-text">Hasta PDF'i Seç</span>
+              <span class="upload-hint">Analiz ~30-60 sn sürebilir</span>
+            </label>
+          </div>
+
+          <div id="patient-progress" class="progress-container hidden">
+            <div class="progress-bar">
+              <div class="progress-fill progress-animated" id="patient-progress-fill"></div>
+            </div>
+            <span class="progress-text" id="patient-progress-text">Claude AI analiz yapıyor...</span>
+          </div>
+          <div id="patient-result" class="result-msg hidden"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Reports Table -->
+    {% if reports %}
+    <div class="reports-section">
+      <div class="section-header-row">
+        <h2 class="section-title">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+          Son Raporlar
+        </h2>
+        <span class="report-count">{{ reports|length }} rapor</span>
+      </div>
+
+      <div class="reports-table-wrapper">
+        <table class="reports-table">
+          <thead>
+            <tr>
+              <th>Hasta ID</th>
+              <th>Dosya</th>
+              <th>Tarih</th>
+              <th>Karar</th>
+              <th>İşlem</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in reports %}
+            <tr>
+              <td class="td-patient">{{ r.patient_id }}</td>
+              <td class="td-file">{{ r.filename }}</td>
+              <td class="td-date">{{ r.created_at[:16].replace('T', ' ') }}</td>
+              <td class="td-status">
+                <span class="karar-badge
+                  {% if r.karar == 'UYGUN' %}karar-ok
+                  {% elif r.karar == 'UYGUN_DEGIL' %}karar-fail
+                  {% else %}karar-warn{% endif %}">
+                  {% if r.karar == 'UYGUN' %}✅{% elif r.karar == 'UYGUN_DEGIL' %}❌{% else %}⚠️{% endif %}
+                  {{ r.karar|replace('_', ' ') }}
+                </span>
+              </td>
+              <td class="td-actions">
+                <a href="/report/{{ r.report_id }}" class="btn btn-sm btn-outline" target="_blank">Görüntüle</a>
+                <a href="/report/{{ r.report_id }}/pdf" class="btn btn-sm btn-primary">PDF</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+  </main>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
