@@ -9,9 +9,16 @@
 
 <!-- Header -->
 <div class="report-header">
-  <h1>{{ L.report_title }}</h1>
-  <div class="subtitle">{{ L.report_subtitle }}</div>
-  <div class="meta">{{ L.patient_label }}: {{ patient_id }} &nbsp;|&nbsp; {{ L.report_date_label }}: {{ generated_at }}</div>
+  <div class="report-header-inner">
+    {% if logo_src %}
+    <div class="report-header-logo"><img src="{{ logo_src }}" alt="Genexa CRO"></div>
+    {% endif %}
+    <div>
+      <h1>{{ L.report_title }}</h1>
+      <div class="subtitle">{{ L.report_subtitle }}</div>
+      <div class="meta">{{ L.patient_label }}: {{ patient_id }} &nbsp;|&nbsp; {{ L.report_date_label }}: {{ generated_at }}</div>
+    </div>
+  </div>
 </div>
 
 <!-- Section 1: Patient Summary -->

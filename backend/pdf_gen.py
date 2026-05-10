@@ -6,23 +6,26 @@ from jinja2 import Environment, FileSystemLoader
 
 BASE_DIR = Path(__file__).parent.parent
 TEMPLATES_DIR = BASE_DIR / "templates"
+LOGO_PATH = BASE_DIR / "static" / "images" / "logo.png"
 
-# xhtml2pdf CSS — simpler than WeasyPrint but reliable
 PDF_CSS = """
 @page { size: A4; margin: 15mm 12mm; }
 body { font-family: Helvetica, Arial, sans-serif; font-size: 9pt; color: #1a1a2e; line-height: 1.4; }
 
-.report-header { background-color: #0D2B5E; color: white; padding: 14px 18px; margin-bottom: 14px; }
+.report-header { background-color: #6B0F1A; color: white; padding: 14px 18px; margin-bottom: 14px; }
+.report-header-inner { display: flex; align-items: center; }
+.report-header-logo { margin-right: 14px; }
+.report-header-logo img { height: 36px; width: auto; }
 .report-header h1 { font-size: 14pt; font-weight: bold; margin: 0 0 4px 0; color: white; }
-.report-header .subtitle { font-size: 9pt; color: #ccd6f0; margin: 0; }
-.report-header .meta { font-size: 8pt; color: #99aed0; margin: 6px 0 0 0; }
+.report-header .subtitle { font-size: 9pt; color: #f0c0c8; margin: 0; }
+.report-header .meta { font-size: 8pt; color: #d9a0aa; margin: 6px 0 0 0; }
 
 .section { margin-bottom: 12px; border: 1px solid #d0dae8; }
-.section-header { background-color: #0D2B5E; color: white; padding: 7px 12px; font-weight: bold; font-size: 9pt; }
+.section-header { background-color: #6B0F1A; color: white; padding: 7px 12px; font-weight: bold; font-size: 9pt; }
 .section-body { padding: 10px 12px; }
 
 table { width: 100%; border-collapse: collapse; font-size: 8pt; margin-top: 6px; }
-th { background-color: #1565C0; color: white; padding: 6px 8px; text-align: left; font-size: 8pt; }
+th { background-color: #9B1C33; color: white; padding: 6px 8px; text-align: left; font-size: 8pt; }
 td { padding: 5px 8px; border-bottom: 1px solid #e0e8f0; vertical-align: top; }
 
 .status-ok { color: #2E7D32; font-weight: bold; }
@@ -41,10 +44,10 @@ td { padding: 5px 8px; border-bottom: 1px solid #e0e8f0; vertical-align: top; }
 
 .info-table td { border: none; padding: 4px 8px; }
 .info-table td:first-child { color: #5a6a8a; font-size: 8pt; text-transform: uppercase; width: 33%; }
-.info-table td:last-child { font-weight: bold; color: #0D2B5E; }
+.info-table td:last-child { font-weight: bold; color: #6B0F1A; }
 
-.kohort-box { background-color: #E3F2FD; border: 1px solid #1565C0; padding: 10px 12px; margin-top: 4px; }
-.kohort-title { font-size: 11pt; font-weight: bold; color: #0D2B5E; margin-bottom: 6px; }
+.kohort-box { background-color: #FFF0F2; border: 1px solid #9B1C33; padding: 10px 12px; margin-top: 4px; }
+.kohort-title { font-size: 11pt; font-weight: bold; color: #6B0F1A; margin-bottom: 6px; }
 
 .footer { margin-top: 14px; padding-top: 8px; border-top: 1px solid #d0d9e8; font-size: 7.5pt; color: #78909C; text-align: center; }
 """
@@ -66,6 +69,8 @@ def _render_pdf(report_data: dict, patient_id: str, output_path: Path, language:
     env.filters["durum_class"] = _durum_class
     env.filters["risk_class"] = _risk_class
 
+    logo_src = f"file://{LOGO_PATH}" if LOGO_PATH.exists() else ""
+
     template = env.get_template("report_template.html")
     html_content = template.render(
         report=report_data,
@@ -74,6 +79,7 @@ def _render_pdf(report_data: dict, patient_id: str, output_path: Path, language:
         L=get_labels(language),
         lang=language,
         pdf_css=PDF_CSS,
+        logo_src=logo_src,
     )
 
     with open(str(output_path), "wb") as f:
