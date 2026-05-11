@@ -4,9 +4,9 @@ import re
 from pathlib import Path
 
 import fitz  # PyMuPDF
-from groq import Groq
+import google.generativeai as genai
 
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "gemini-2.5-flash"
 
 SYSTEM_PROMPT_TEMPLATE = """You are an expert clinical research evaluation assistant working for Genexa CRO. Below is the full text of a clinical trial protocol.
 
@@ -218,13 +218,14 @@ def extract_protocol_criteria(protocol_text: str) -> str:
 
 class ProtocolAnalyzer:
     def __init__(self):
-        self._client = None
+        self._model = None
 
     @property
-    def client(self) -> Groq:
-        if self._client is None:
-            self._client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        return self._client
+    def model(self):
+        if self._model is None:
+            genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+            self._model = genai.GenerativeModel(MODEL)
+        return self._model
 
     def reset_protocol(self):
         pass
@@ -236,8 +237,6 @@ class ProtocolAnalyzer:
         return "\n".join(pages)
 
     async def analyze(self, protocol_text: str, patient_text: str, language: str = "tr") -> dict:
-        # Trim protocol to relevant sections only
-        protocol_text = extract_protocol_criteria(protocol_text)
         lang = language if language in LANGUAGE_CONFIGS else "tr"
         cfg = LANGUAGE_CONFIGS[lang]
 
@@ -247,17 +246,17 @@ class ProtocolAnalyzer:
         )
         user_message = USER_MESSAGE[lang].format(patient_text=patient_text)
 
-        response = self.client.chat.completions.create(
-            model=MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message},
-            ],
-            temperature=0.1,
-            max_tokens=8000,
+        model = genai.GenerativeModel(
+            model_name=MODEL,
+            system_instruction=system_prompt,
+            generation_config=genai.GenerationConfig(
+                temperature=0.1,
+                max_output_tokens=8000,
+            ),
         )
+        response = model.generate_content(user_message)
 
-        raw_text = response.choices[0].message.content or ""
+        raw_text = response.text or ""
         return self._parse_json_response(raw_text, lang)
 
     def _parse_json_response(self, text: str, lang: str = "tr") -> dict:
