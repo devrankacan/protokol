@@ -15,10 +15,10 @@ def _register_fonts():
     try:
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
-        if DEJAVU_FONT.exists():
-            pdfmetrics.registerFont(TTFont("DejaVu", str(DEJAVU_FONT)))
-        if DEJAVU_BOLD.exists():
-            pdfmetrics.registerFont(TTFont("DejaVu-Bold", str(DEJAVU_BOLD)))
+        from reportlab.pdfbase.pdfmetrics import registerFontFamily
+        pdfmetrics.registerFont(TTFont("DejaVu", str(DEJAVU_FONT)))
+        pdfmetrics.registerFont(TTFont("DejaVu-Bold", str(DEJAVU_BOLD)))
+        registerFontFamily("DejaVu", normal="DejaVu", bold="DejaVu-Bold", italic="DejaVu", boldItalic="DejaVu-Bold")
         return True
     except Exception:
         return False
