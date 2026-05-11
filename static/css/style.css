@@ -1005,6 +1005,59 @@ button { cursor: pointer; font-family: inherit; }
   box-shadow: 0 1px 5px rgba(107,15,26,.12);
 }
 
+/* ── Usage Bar ────────────────────────────────────────────────────────────── */
+.usage-bar-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
+}
+
+.usage-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.usage-bar-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.usage-bar-count {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-mid);
+}
+
+.usage-bar-track {
+  height: 8px;
+  background: #E8ECF4;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.usage-bar-fill {
+  height: 100%;
+  background: var(--navy-mid);
+  border-radius: 4px;
+  transition: width .4s ease;
+  min-width: 4px;
+}
+
+.usage-bar-warn   { background: var(--warning); }
+.usage-bar-danger { background: var(--danger); }
+
+.usage-bar-sub {
+  font-size: 11px;
+  color: var(--text-light);
+  margin-top: 6px;
+}
+
 /* ── Logo Toggle ──────────────────────────────────────────────────────────── */
 .logo-toggle-btn {
   display: inline-flex;

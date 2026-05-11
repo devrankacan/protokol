@@ -35,6 +35,18 @@
       <p class="page-subtitle">Klinik araştırma protokollerine göre hasta uygunluk değerlendirmesi</p>
     </div>
 
+    <!-- Günlük Kullanım -->
+    <div class="usage-bar-card">
+      <div class="usage-bar-header">
+        <span class="usage-bar-label">Günlük AI Kullanımı</span>
+        <span class="usage-bar-count">{{ usage_count }} / {{ usage_limit }} rapor</span>
+      </div>
+      <div class="usage-bar-track">
+        <div class="usage-bar-fill {% if usage_pct >= 90 %}usage-bar-danger{% elif usage_pct >= 60 %}usage-bar-warn{% endif %}" style="width: {{ usage_pct }}%"></div>
+      </div>
+      <div class="usage-bar-sub">Her gün gece yarısı sıfırlanır (UTC+3)</div>
+    </div>
+
     <!-- Step Cards -->
     <div class="step-grid">
 

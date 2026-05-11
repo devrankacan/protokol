@@ -23,6 +23,23 @@ REPORTS_DIR = BASE_DIR / "reports"
 PROTOCOL_PATH = BASE_DIR / "uploads" / "protocol.pdf"
 PROTOCOL_TEXT_PATH = BASE_DIR / "uploads" / "protocol_text.txt"
 LOGO_PATH = BASE_DIR / "static" / "images" / "logo.png"
+USAGE_PATH = BASE_DIR / "uploads" / "usage.json"
+DAILY_LIMIT = 20
+
+
+def get_usage() -> dict:
+    today = datetime.now().strftime("%Y-%m-%d")
+    if USAGE_PATH.exists():
+        data = json.loads(USAGE_PATH.read_text())
+        if data.get("date") == today:
+            return data
+    return {"date": today, "count": 0}
+
+
+def increment_usage():
+    data = get_usage()
+    data["count"] += 1
+    USAGE_PATH.write_text(json.dumps(data))
 
 UPLOADS_DIR.mkdir(exist_ok=True)
 REPORTS_DIR.mkdir(exist_ok=True)
@@ -115,11 +132,16 @@ async def dashboard(request: Request):
         except Exception:
             pass
 
+    usage = get_usage()
+
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "protocol_loaded": protocol_loaded,
         "protocol_name": protocol_name,
         "reports": reports,
+        "usage_count": usage["count"],
+        "usage_limit": DAILY_LIMIT,
+        "usage_pct": min(100, int(usage["count"] / DAILY_LIMIT * 100)),
     })
 
 
@@ -228,6 +250,8 @@ async def analyze_patient(
         (REPORTS_DIR / f"{report_id}.json").write_text(
             json.dumps({**meta, "report": report_data}, ensure_ascii=False, indent=2)
         )
+
+        increment_usage()
 
         pdf_path = REPORTS_DIR / f"{report_id}.pdf"
         await generate_report_pdf(report_data, pid, pdf_path, language=lang, show_logo=(include_logo == "1"))

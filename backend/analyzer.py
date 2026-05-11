@@ -252,6 +252,7 @@ class ProtocolAnalyzer:
             generation_config=genai.GenerationConfig(
                 temperature=0.1,
                 max_output_tokens=8000,
+                response_mime_type="application/json",
             ),
         )
         response = model.generate_content(user_message)
