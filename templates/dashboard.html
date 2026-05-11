@@ -175,8 +175,26 @@
         <span class="report-count">{{ reports|length }} rapor</span>
       </div>
 
+      <div class="report-tabs" id="report-tabs">
+        <button class="report-tab report-tab-active" onclick="filterReports('all', this)">
+          Tümü <span class="tab-count" id="tab-count-all">{{ reports|length }}</span>
+        </button>
+        <button class="report-tab" onclick="filterReports('today', this)">
+          Bugün <span class="tab-count" id="tab-count-today">0</span>
+        </button>
+        <button class="report-tab" onclick="filterReports('week', this)">
+          Bu Hafta <span class="tab-count" id="tab-count-week">0</span>
+        </button>
+        <button class="report-tab" onclick="filterReports('month', this)">
+          Bu Ay <span class="tab-count" id="tab-count-month">0</span>
+        </button>
+        <button class="report-tab" onclick="filterReports('year', this)">
+          Bu Yıl <span class="tab-count" id="tab-count-year">0</span>
+        </button>
+      </div>
+
       <div class="reports-table-wrapper">
-        <table class="reports-table">
+        <table class="reports-table" id="reports-table">
           <thead>
             <tr>
               <th>Hasta ID</th>
@@ -187,9 +205,9 @@
               <th>İşlem</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="reports-tbody">
             {% for r in reports %}
-            <tr>
+            <tr data-date="{{ r.created_at[:10] }}">
               <td class="td-patient">{{ r.patient_id }}</td>
               <td class="td-file">{{ r.filename }}</td>
               <td class="td-date">{{ r.created_at[:16].replace('T', ' ') }}</td>

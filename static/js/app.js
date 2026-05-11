@@ -157,7 +157,8 @@ async function analyzePatient(input) {
          &nbsp; <a href="/report/${data.report_id}/pdf" style="color:var(--navy-mid);font-weight:700">PDF İndir ↓</a>`,
         true
       );
-      setTimeout(() => location.reload(), 4000);
+      showToast(data);
+      setTimeout(() => location.reload(), 5000);
     } else {
       showResult(result, `❌ Hata: ${data.detail || 'Analiz başarısız'}`, false);
     }
@@ -220,6 +221,99 @@ async function uploadLogo(input) {
     input.value = '';
   }
 }
+
+
+// ── Toast Notification ────────────────────────────────────────────────────────
+
+function showToast(data) {
+  const icon = data.karar === 'UYGUN' ? '✅' : data.karar === 'UYGUN_DEGIL' ? '❌' : '⚠️';
+  const isTR = (data.language || 'tr') === 'tr';
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `
+    <div class="toast-icon">${icon}</div>
+    <div class="toast-body">
+      <div class="toast-title">${isTR ? 'Raporunuz Hazır!' : 'Report Ready!'}</div>
+      <div class="toast-sub">${data.patient_id} — ${data.karar_text}</div>
+      <div class="toast-actions">
+        <a href="/report/${data.report_id}" target="_blank">${isTR ? 'Görüntüle' : 'View'}</a>
+        <a href="/report/${data.report_id}/pdf">${isTR ? 'PDF İndir' : 'Download PDF'}</a>
+      </div>
+    </div>
+    <button class="toast-close" onclick="dismissToast(this.closest('.toast'))">×</button>
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => dismissToast(toast), 8000);
+}
+
+function dismissToast(toast) {
+  if (!toast || toast.classList.contains('toast-hiding')) return;
+  toast.classList.add('toast-hiding');
+  setTimeout(() => toast.remove(), 300);
+}
+
+
+// ── Report Period Filter ──────────────────────────────────────────────────────
+
+function filterReports(period, btn) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const weekStart  = new Date(today); weekStart.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const yearStart  = new Date(today.getFullYear(), 0, 1);
+
+  const rows = document.querySelectorAll('#reports-tbody tr[data-date]');
+  let visible = 0;
+  rows.forEach(row => {
+    const d = new Date(row.dataset.date);
+    let show = true;
+    if (period === 'today')  show = d >= today;
+    else if (period === 'week')  show = d >= weekStart;
+    else if (period === 'month') show = d >= monthStart;
+    else if (period === 'year')  show = d >= yearStart;
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+
+  // Empty state
+  const tbody = document.getElementById('reports-tbody');
+  const existing = tbody.querySelector('.report-empty-row');
+  if (existing) existing.remove();
+  if (visible === 0) {
+    const tr = document.createElement('tr');
+    tr.className = 'report-empty-row';
+    tr.innerHTML = '<td colspan="6">Bu dönemde rapor bulunamadı.</td>';
+    tbody.appendChild(tr);
+  }
+
+  // Active tab
+  document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('report-tab-active'));
+  if (btn) btn.classList.add('report-tab-active');
+}
+
+// Initialize tab counts on page load
+document.addEventListener('DOMContentLoaded', () => {
+  const rows = document.querySelectorAll('#reports-tbody tr[data-date]');
+  if (!rows.length) return;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const weekStart  = new Date(today); weekStart.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const yearStart  = new Date(today.getFullYear(), 0, 1);
+
+  let counts = { today: 0, week: 0, month: 0, year: 0 };
+  rows.forEach(row => {
+    const d = new Date(row.dataset.date);
+    if (d >= today)       counts.today++;
+    if (d >= weekStart)   counts.week++;
+    if (d >= monthStart)  counts.month++;
+    if (d >= yearStart)   counts.year++;
+  });
+  ['today','week','month','year'].forEach(k => {
+    const el = document.getElementById('tab-count-' + k);
+    if (el) el.textContent = counts[k];
+  });
+});
 
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
