@@ -188,11 +188,7 @@ def _render_pdf(report_data: dict, patient_id: str, output_path: Path, language:
         color = GREEN if sev in ("DÜŞÜK","LOW") else (RED if sev in ("YÜKSEK","HIGH") else ORANGE)
         pdf.risk_row(sev, r.get("risk",""), r.get("aciklama",""), color)
     if rsk.get("onerilen_izlem"):
-        pdf.set_font(pdf.FONT, "B", 8)
-        pdf.set_text_color(*TEXT)
-        pdf.cell(0, 5, f"{L.get('recommended_monitoring','Önerilen İzlem')}: ", ln=False)
-        pdf.set_font(pdf.FONT, "", 8)
-        pdf.multi_cell(0, 5, rsk.get("onerilen_izlem",""))
+        pdf.kv_row(L.get("recommended_monitoring", "Önerilen İzlem"), rsk.get("onerilen_izlem", ""))
     pdf.ln(3)
 
     # ── Section 7: Genel Karar ───────────────────────────────────────────────
