@@ -41,6 +41,34 @@ def increment_usage():
     data["count"] += 1
     USAGE_PATH.write_text(json.dumps(data))
 
+MONTHS_TR = ["", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+             "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+DAYS_TR = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
+
+
+def _group_reports(reports: list) -> list:
+    from collections import OrderedDict
+    tree: dict = OrderedDict()
+    for r in reports:
+        try:
+            dt = datetime.fromisoformat(r["created_at"])
+        except Exception:
+            continue
+        year  = str(dt.year)
+        month = f"{MONTHS_TR[dt.month]} {dt.year}"
+        day   = f"{dt.day} {MONTHS_TR[dt.month]}, {DAYS_TR[dt.weekday()]}"
+        tree.setdefault(year, OrderedDict()).setdefault(month, OrderedDict()).setdefault(day, []).append(r)
+
+    result = []
+    for year, months in tree.items():
+        month_list = []
+        for month_label, days in months.items():
+            day_list = [{"label": d, "reports": reps} for d, reps in days.items()]
+            month_list.append({"label": month_label, "days": day_list, "count": sum(len(d["reports"]) for d in day_list)})
+        result.append({"year": year, "months": month_list, "count": sum(m["count"] for m in month_list)})
+    return result
+
+
 UPLOADS_DIR.mkdir(exist_ok=True)
 REPORTS_DIR.mkdir(exist_ok=True)
 (BASE_DIR / "static" / "images").mkdir(exist_ok=True)
@@ -125,13 +153,14 @@ async def dashboard(request: Request):
             protocol_name = meta.get("filename", "Protokol yüklendi")
 
     reports = []
-    for report_file in sorted(REPORTS_DIR.glob("*.json"), reverse=True)[:20]:
+    for report_file in sorted(REPORTS_DIR.glob("*.json"), reverse=True):
         try:
             meta = json.loads(report_file.read_text())
             reports.append(meta)
         except Exception:
             pass
 
+    report_groups = _group_reports(reports)
     usage = get_usage()
 
     return templates.TemplateResponse("dashboard.html", {
@@ -139,6 +168,7 @@ async def dashboard(request: Request):
         "protocol_loaded": protocol_loaded,
         "protocol_name": protocol_name,
         "reports": reports,
+        "report_groups": report_groups,
         "usage_count": usage["count"],
         "usage_limit": DAILY_LIMIT,
         "usage_pct": min(100, int(usage["count"] / DAILY_LIMIT * 100)),

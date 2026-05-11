@@ -253,67 +253,59 @@ function dismissToast(toast) {
 }
 
 
-// ── Report Period Filter ──────────────────────────────────────────────────────
+// ── Accordion ─────────────────────────────────────────────────────────────────
 
-function filterReports(period, btn) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const weekStart  = new Date(today); weekStart.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const yearStart  = new Date(today.getFullYear(), 0, 1);
-
-  const rows = document.querySelectorAll('#reports-tbody tr[data-date]');
-  let visible = 0;
-  rows.forEach(row => {
-    const d = new Date(row.dataset.date);
-    let show = true;
-    if (period === 'today')  show = d >= today;
-    else if (period === 'week')  show = d >= weekStart;
-    else if (period === 'month') show = d >= monthStart;
-    else if (period === 'year')  show = d >= yearStart;
-    row.style.display = show ? '' : 'none';
-    if (show) visible++;
-  });
-
-  // Empty state
-  const tbody = document.getElementById('reports-tbody');
-  const existing = tbody.querySelector('.report-empty-row');
-  if (existing) existing.remove();
-  if (visible === 0) {
-    const tr = document.createElement('tr');
-    tr.className = 'report-empty-row';
-    tr.innerHTML = '<td colspan="6">Bu dönemde rapor bulunamadı.</td>';
-    tbody.appendChild(tr);
-  }
-
-  // Active tab
-  document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('report-tab-active'));
-  if (btn) btn.classList.add('report-tab-active');
+function toggleAcc(btn) {
+  const parent = btn.parentElement;
+  const body   = btn.nextElementSibling;
+  const isOpen = parent.classList.toggle('acc-open');
+  body.classList.toggle('acc-body-open', isOpen);
 }
 
-// Initialize tab counts on page load
-document.addEventListener('DOMContentLoaded', () => {
-  const rows = document.querySelectorAll('#reports-tbody tr[data-date]');
-  if (!rows.length) return;
 
-  const today = new Date(); today.setHours(0,0,0,0);
-  const weekStart  = new Date(today); weekStart.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const yearStart  = new Date(today.getFullYear(), 0, 1);
+// ── Report Search ─────────────────────────────────────────────────────────────
 
-  let counts = { today: 0, week: 0, month: 0, year: 0 };
-  rows.forEach(row => {
-    const d = new Date(row.dataset.date);
-    if (d >= today)       counts.today++;
-    if (d >= weekStart)   counts.week++;
-    if (d >= monthStart)  counts.month++;
-    if (d >= yearStart)   counts.year++;
+function searchReports(query) {
+  const accordion    = document.getElementById('report-accordion');
+  const searchResult = document.getElementById('search-results');
+  const clearBtn     = document.getElementById('search-clear');
+  const tbody        = document.getElementById('search-tbody');
+
+  query = query.trim().toLowerCase();
+
+  if (!query) {
+    searchResult.classList.add('hidden');
+    accordion.classList.remove('hidden');
+    clearBtn.classList.add('hidden');
+    return;
+  }
+
+  clearBtn.classList.remove('hidden');
+  accordion.classList.add('hidden');
+  searchResult.classList.remove('hidden');
+
+  // Collect all report rows from accordion
+  const allRows = document.querySelectorAll('#report-accordion tr[data-search]');
+  tbody.innerHTML = '';
+  let count = 0;
+  allRows.forEach(row => {
+    if (row.dataset.search.includes(query)) {
+      tbody.appendChild(row.cloneNode(true));
+      count++;
+    }
   });
-  ['today','week','month','year'].forEach(k => {
-    const el = document.getElementById('tab-count-' + k);
-    if (el) el.textContent = counts[k];
-  });
-});
+
+  if (count === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text-light)">Sonuç bulunamadı.</td></tr>';
+  }
+}
+
+function clearSearch() {
+  const input = document.getElementById('report-search');
+  input.value = '';
+  searchReports('');
+  input.focus();
+}
 
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
