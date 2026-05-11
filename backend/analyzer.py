@@ -251,7 +251,7 @@ class ProtocolAnalyzer:
             system_instruction=system_prompt,
             generation_config=genai.GenerationConfig(
                 temperature=0.1,
-                max_output_tokens=8000,
+                max_output_tokens=32000,
                 response_mime_type="application/json",
             ),
         )
