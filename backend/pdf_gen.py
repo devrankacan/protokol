@@ -11,17 +11,20 @@ LOGO_PATH = BASE_DIR / "static" / "images" / "logo.png"
 DEJAVU_FONT = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
 DEJAVU_BOLD = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
 
-def _font_face_css() -> str:
-    if not DEJAVU_FONT.exists():
-        return ""
-    css = f"@font-face {{ font-family: DejaVu; src: url('file://{DEJAVU_FONT}'); font-weight: normal; }}\n"
-    if DEJAVU_BOLD.exists():
-        css += f"@font-face {{ font-family: DejaVu; src: url('file://{DEJAVU_BOLD}'); font-weight: bold; }}\n"
-    return css
+def _register_fonts():
+    try:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        if DEJAVU_FONT.exists():
+            pdfmetrics.registerFont(TTFont("DejaVu", str(DEJAVU_FONT)))
+        if DEJAVU_BOLD.exists():
+            pdfmetrics.registerFont(TTFont("DejaVu-Bold", str(DEJAVU_BOLD)))
+        return True
+    except Exception:
+        return False
 
 PDF_CSS_BASE = """
 @page { size: A4; margin: 15mm 12mm; }
-%%FONT_FACE%%
 body { font-family: %%FONT_FAMILY%%; font-size: 9pt; color: #1a1a2e; line-height: 1.4; }
 
 .report-header { background-color: #6B0F1A; color: white; padding: 14px 18px; margin-bottom: 14px; }
@@ -81,10 +84,10 @@ def _render_pdf(report_data: dict, patient_id: str, output_path: Path, language:
     env.filters["durum_class"] = _durum_class
     env.filters["risk_class"] = _risk_class
 
-    # Build CSS with font support
-    font_face = _font_face_css()
-    font_family = "DejaVu, Helvetica, Arial, sans-serif" if font_face else "Helvetica, Arial, sans-serif"
-    pdf_css = PDF_CSS_BASE.replace("%%FONT_FACE%%", font_face).replace("%%FONT_FAMILY%%", font_family)
+    # Register fonts and build CSS
+    fonts_ok = _register_fonts()
+    font_family = "DejaVu" if fonts_ok and DEJAVU_FONT.exists() else "Helvetica, Arial, sans-serif"
+    pdf_css = PDF_CSS_BASE.replace("%%FONT_FAMILY%%", font_family)
 
     # Logo as base64 data URL for reliable embedding
     logo_src = ""
