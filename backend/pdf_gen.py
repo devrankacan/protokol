@@ -23,6 +23,21 @@ def _register_fonts():
     except Exception:
         return False
 
+
+def _font_face_css() -> str:
+    if not DEJAVU_FONT.exists():
+        return ""
+    lines = [
+        f"@font-face {{ font-family: DejaVu; src: url('file://{DEJAVU_FONT}'); font-weight: normal; font-style: normal; }}",
+    ]
+    if DEJAVU_BOLD.exists():
+        lines.append(f"@font-face {{ font-family: DejaVu; src: url('file://{DEJAVU_BOLD}'); font-weight: bold; font-style: normal; }}")
+    return "\n".join(lines)
+
+
+def _link_callback(uri, rel):
+    return uri
+
 PDF_CSS_BASE = """
 @page { size: A4; margin: 15mm 12mm; }
 body { font-family: %%FONT_FAMILY%%; font-size: 9pt; color: #1a1a2e; line-height: 1.4; }
@@ -84,10 +99,11 @@ def _render_pdf(report_data: dict, patient_id: str, output_path: Path, language:
     env.filters["durum_class"] = _durum_class
     env.filters["risk_class"] = _risk_class
 
-    # Register fonts and build CSS
-    fonts_ok = _register_fonts()
-    font_family = "DejaVu" if fonts_ok and DEJAVU_FONT.exists() else "Helvetica, Arial, sans-serif"
-    pdf_css = PDF_CSS_BASE.replace("%%FONT_FAMILY%%", font_family)
+    # Register fonts both via ReportLab and @font-face CSS
+    _register_fonts()
+    font_css = _font_face_css()
+    font_family = "DejaVu" if DEJAVU_FONT.exists() else "Helvetica, Arial, sans-serif"
+    pdf_css = font_css + "\n" + PDF_CSS_BASE.replace("%%FONT_FAMILY%%", font_family)
 
     # Logo as base64 data URL for reliable embedding
     logo_src = ""
@@ -109,7 +125,7 @@ def _render_pdf(report_data: dict, patient_id: str, output_path: Path, language:
     )
 
     with open(str(output_path), "wb") as f:
-        result = pisa.CreatePDF(html_content, dest=f, encoding="utf-8")
+        result = pisa.CreatePDF(html_content, dest=f, encoding="utf-8", link_callback=_link_callback)
 
     if result.err:
         raise RuntimeError(f"PDF oluşturma hatası: {result.err}")
